@@ -1,11 +1,20 @@
 // Realtime connection for live multiplayer.
 //
-// The production version will connect to the Orleans backend over SignalR or a
-// WebSocket to stream the opponent's presence and moves. Until that exists,
-// this stub simulates an opponent joining shortly after you open a game so the
-// "live user" UI can be developed and demoed end-to-end.
+// Connects to the local ChessAPI SignalR hub (ChatHub mapped at /chatHub).
+// This is a minimal "is it wired up?" integration: when you open a game we
+// join the hub, announce ourselves with SendMessage, and surface any
+// ReceiveMessage broadcasts back through the existing handler shape.
+//
+// Base URL defaults to the local backend; override with VITE_API_BASE_URL.
 
-const USE_STUB = (import.meta.env.VITE_API_BASE_URL ?? '') === '';
+import {
+  HubConnectionBuilder,
+  HttpTransportType,
+  LogLevel,
+} from '@microsoft/signalr';
+
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5242';
 
 /**
  * Subscribe to live updates for a game.
@@ -14,22 +23,42 @@ const USE_STUB = (import.meta.env.VITE_API_BASE_URL ?? '') === '';
  * @param {{
  *   onOpponentJoined?: (player: { name: string, color: 'w' | 'b' }) => void,
  *   onOpponentMove?: (snapshot: object) => void,
+ *   onMessage?: (user: string, message: string) => void,
  * }} handlers
- * @returns {{ disconnect: () => void }}
+ * @returns {{ disconnect: () => void, send: (message: string) => void }}
  */
 export function connectToGame(gameId, handlers = {}) {
-  if (USE_STUB) {
-    // Simulate a second player joining the live game after a short delay.
-    const timer = setTimeout(() => {
-      handlers.onOpponentJoined?.({ name: 'Opponent', color: 'b' });
-    }, 1500);
+  const connection = new HubConnectionBuilder()
+    .withUrl(`${API_BASE_URL}/chatHub`, {
+      transport: HttpTransportType.WebSockets,
+    })
+    .withAutomaticReconnect()
+    .configureLogging(LogLevel.Information)
+    .build();
 
-    return {
-      disconnect: () => clearTimeout(timer),
-    };
-  }
+  // ChatHub broadcasts ReceiveMessage(user, message) to every client.
+  connection.on('ReceiveMessage', (user, message) => {
+    handlers.onMessage?.(user, message);
 
-  // Placeholder for the real SignalR/WebSocket wiring.
-  // const connection = new HubConnectionBuilder()...
-  return { disconnect: () => {} };
+    // Treat a "joined" announcement as opponent presence for the game UI.
+    if (typeof message === 'string' && message.startsWith('joined:')) {
+      handlers.onOpponentJoined?.({ name: user, color: 'b' });
+    }
+  });
+
+  connection
+    .start()
+    .then(() => connection.invoke('SendMessage', 'you', `joined:${gameId}`))
+    .catch((err) => {
+      // eslint-disable-next-line no-console
+      console.error('SignalR connection failed:', err);
+    });
+
+  return {
+    disconnect: () => connection.stop(),
+    send: (message) =>
+      connection.state === 'Connected'
+        ? connection.invoke('SendMessage', 'you', message)
+        : Promise.resolve(),
+  };
 }

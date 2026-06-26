@@ -1,0 +1,7 @@
+@baseUrl = http://localhost:5242
+
+###
+# Health check — should return API info + endpoint list
+GET {{baseUrl}}/chatHub
+Accept: application/json
+
