@@ -22,14 +22,20 @@ function delay(ms = 250) {
 
 /**
  * Create a new game. Resolves with the created game descriptor.
- * @returns {Promise<{ gameId: string, color: 'w', players: string[] }>}
+ * @returns {Promise<{ gameId: string, sessionId: string, color: 'w', players: string[] }>}
  */
 export async function createGame() {
   if (USE_STUB) {
     await delay();
-    const gameId = randomGameId();
-    const game = { gameId, players: ['you'], color: 'w' };
-    stubGames.set(gameId, game);
+    // Dummy call: pretend the backend created a session and returned its id.
+    const sessionId = randomGameId();
+    const game = {
+      gameId: sessionId,
+      sessionId,
+      players: ['you'],
+      color: 'w',
+    };
+    stubGames.set(sessionId, game);
     return game;
   }
 
