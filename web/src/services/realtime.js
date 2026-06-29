@@ -52,7 +52,7 @@ export function connectToGame(gameId, handlers = {}) {
 
   connection
     .start()
-    .then(() => connection.invoke('SendMessage', 'you', `joined:${gameId}`))
+    .then(() => connection.invoke('CreateGame', 'you', `joined:${gameId}`))
     .catch((err) => {
       // eslint-disable-next-line no-console
       console.error('SignalR connection failed:', err);
