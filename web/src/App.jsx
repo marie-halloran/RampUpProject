@@ -4,14 +4,14 @@ import { useGameConnection } from './context/GameConnectionContext';
 import './App.css';
 
 function App() {
-  const { game, setGame } = useGameConnection();
+  const { game, leaveGame } = useGameConnection();
 
   return (
     <main className="app">
       {game ? (
-        <GameView game={game} onLeave={() => setGame(null)} />
+        <GameView game={game} onLeave={leaveGame} />
       ) : (
-        <Lobby onGameReady={setGame} />
+        <Lobby />
       )}
     </main>
   );

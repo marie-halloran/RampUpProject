@@ -6,16 +6,19 @@ import {
   useRef,
   useState,
 } from 'react';
-import { connectToGame } from '../services/realtime';
+import { buildGameConnection } from '../services/realtime';
 
 /**
- * Holds the active game and its live SignalR connection so any component in the
- * tree can read the current game, send moves, or react to opponent updates.
+ * Holds ONE persistent SignalR connection for the whole session plus the active
+ * game. Creating/joining a game are invokes on that single connection, so the
+ * socket is never opened-then-closed and changing games never reconnects.
  *
  * Value shape:
  *   game                               — the active game descriptor, or null
- *   setGame(game)                      — set/clear the active game (null leaves)
- *   getConnection(): connection | null — the live connection ({ disconnect, sendMove })
+ *   ready                              — whether the connection is established
+ *   createGame(): Promise<string>      — create a game; sets it active, returns id
+ *   joinGame(id, extra?): Promise<void>— join a game by id; sets it active
+ *   leaveGame()                        — clear the active game (stays connected)
  *   sendMove(snapshot): Promise<void>  — broadcast a board snapshot
  *   setHandlers(handlers)              — register { onOpponentJoined, onOpponentMove }
  */
@@ -23,33 +26,67 @@ const GameConnectionContext = createContext(null);
 
 export function GameConnectionProvider({ children }) {
   const [game, setGame] = useState(null);
-  const gameId = game?.gameId ?? null;
+  const [ready, setReady] = useState(false);
   const connectionRef = useRef(null);
   // Latest consumer handlers, read indirectly so the connection never closes
   // over stale callbacks.
   const handlersRef = useRef({});
 
+  // Open a single connection for the lifetime of the provider.
   useEffect(() => {
-    if (!gameId) return undefined;
-
-    const connection = connectToGame(gameId, {
-      onOpponentJoined: (player) => handlersRef.current.onOpponentJoined?.(player),
-      onOpponentMove: (snapshot) => handlersRef.current.onOpponentMove?.(snapshot),
-    });
+    const connection = buildGameConnection();
     connectionRef.current = connection;
 
+    connection.on('ReceiveMove', (snapshot) =>
+      handlersRef.current.onOpponentMove?.(snapshot),
+    );
+
+    let cancelled = false;
+    connection
+      .start()
+      .then(() => {
+        if (!cancelled) setReady(true);
+      })
+      .catch((err) => {
+        // eslint-disable-next-line no-console
+        console.error('SignalR connection failed:', err);
+      });
+
     return () => {
+      cancelled = true;
       connectionRef.current = null;
-      connection.disconnect();
+      setReady(false);
+      connection.stop();
     };
-  }, [gameId]);
+  }, []);
+
+  const createGame = useCallback(async () => {
+    const connection = connectionRef.current;
+    if (!connection) throw new Error('Not connected to server');
+    const gameId = await connection.invoke('CreateGame');
+    setGame({ gameId, color: 'w' });
+    return gameId;
+  }, []);
+
+  const joinGame = useCallback(async (id, extra = {}) => {
+    const connection = connectionRef.current;
+    if (!connection) throw new Error('Not connected to server');
+    const trimmed = id?.trim();
+    if (!trimmed) throw new Error('Game code is required');
+    await connection.invoke('JoinGame', trimmed);
+    setGame({ gameId: trimmed, ...extra });
+  }, []);
+
+  const leaveGame = useCallback(() => setGame(null), []);
 
   const sendMove = useCallback(
-    (snapshot) => connectionRef.current?.sendMove(gameId, snapshot) ?? Promise.resolve(),
-    [gameId],
+    (snapshot) => {
+      const connection = connectionRef.current;
+      if (!connection || !game) return Promise.resolve();
+      return connection.invoke('SendMove', game.gameId, snapshot);
+    },
+    [game],
   );
-
-  const getConnection = useCallback(() => connectionRef.current, []);
 
   const setHandlers = useCallback((handlers) => {
     handlersRef.current = handlers ?? {};
@@ -57,7 +94,7 @@ export function GameConnectionProvider({ children }) {
 
   return (
     <GameConnectionContext.Provider
-      value={{ game, setGame, getConnection, sendMove, setHandlers }}
+      value={{ game, ready, createGame, joinGame, leaveGame, sendMove, setHandlers }}
     >
       {children}
     </GameConnectionContext.Provider>

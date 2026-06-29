@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { createGame, joinGame } from '../services/api';
+import { useGameConnection } from '../context/GameConnectionContext';
 
 /**
  * Landing screen where a player can create a new game or join an existing one
- * by entering a game code. Calls onGameReady with the game descriptor.
+ * by entering a game code. Both actions run over the shared connection and set
+ * the active game on the context.
  */
-export default function Lobby({ onGameReady }) {
+export default function Lobby() {
+  const { createGame, joinGame, ready } = useGameConnection();
   const [joinCode, setJoinCode] = useState('');
   const [busy, setBusy] = useState(null); // 'create' | 'join' | null
   const [error, setError] = useState('');
@@ -14,8 +16,7 @@ export default function Lobby({ onGameReady }) {
     setError('');
     setBusy('create');
     try {
-      const game = await createGame();
-      onGameReady(game);
+      await createGame();
     } catch (err) {
       setError(err.message ?? 'Could not create game');
     } finally {
@@ -28,8 +29,7 @@ export default function Lobby({ onGameReady }) {
     setError('');
     setBusy('join');
     try {
-      const game = await joinGame(joinCode);
-      onGameReady(game);
+      await joinGame(joinCode, { color: 'b' });
     } catch (err) {
       setError(err.message ?? 'Could not join game');
     } finally {
@@ -50,7 +50,7 @@ export default function Lobby({ onGameReady }) {
             type="button"
             className="primary-btn"
             onClick={handleCreate}
-            disabled={busy !== null}
+            disabled={busy !== null || !ready}
           >
             {busy === 'create' ? 'Creating…' : 'Create game'}
           </button>
@@ -70,7 +70,7 @@ export default function Lobby({ onGameReady }) {
             <button
               type="submit"
               className="primary-btn"
-              disabled={busy !== null || joinCode.trim() === ''}
+              disabled={busy !== null || !ready || joinCode.trim() === ''}
             >
               {busy === 'join' ? 'Joining…' : 'Join game'}
             </button>
