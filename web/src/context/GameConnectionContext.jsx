@@ -37,9 +37,10 @@ export function GameConnectionProvider({ children }) {
     const connection = buildGameConnection();
     connectionRef.current = connection;
 
-    connection.on('ReceiveMove', (snapshot) =>
-      handlersRef.current.onOpponentMove?.(snapshot),
-    );
+    connection.on('ReceiveMove', (snapshot) => {
+        console.log(snapshot);
+        handlersRef.current.onOpponentMove?.(snapshot);
+    });
 
     let cancelled = false;
     connection
