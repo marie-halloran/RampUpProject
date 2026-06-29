@@ -17,9 +17,7 @@ builder.Services.AddCors(options =>
               .AllowCredentials());
 });
 
-// Orleans silo. Local clustering + in-memory grain storage for development.
-// The storage provider is named "cosmos" to match [PersistentState("game", "cosmos")]
-// on GameGrain; swap AddMemoryGrainStorage for AddCosmosGrainStorage in production.
+
 builder.Host.UseOrleans(silo =>
 {
     silo.UseLocalhostClustering();
