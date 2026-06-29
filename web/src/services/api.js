@@ -20,6 +20,8 @@ export async function createGame() {
  * @param {string} gameId
  * @returns {Promise<{ gameId: string, color: 'b' }>}
  */
+
+//TODO
 export async function joinGame(gameId) {
   const id = gameId.trim();
   if (!id) throw new Error('Game code is required');

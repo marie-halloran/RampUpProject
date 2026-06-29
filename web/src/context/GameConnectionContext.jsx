@@ -4,20 +4,26 @@ import {
   useContext,
   useEffect,
   useRef,
+  useState,
 } from 'react';
 import { connectToGame } from '../services/realtime';
 
 /**
- * Holds the live SignalR connection for the active game so any component in the
- * tree can send moves or react to opponent updates without re-connecting.
+ * Holds the active game and its live SignalR connection so any component in the
+ * tree can read the current game, send moves, or react to opponent updates.
  *
  * Value shape:
+ *   game                               — the active game descriptor, or null
+ *   setGame(game)                      — set/clear the active game (null leaves)
+ *   getConnection(): connection | null — the live connection ({ disconnect, sendMove })
  *   sendMove(snapshot): Promise<void>  — broadcast a board snapshot
  *   setHandlers(handlers)              — register { onOpponentJoined, onOpponentMove }
  */
 const GameConnectionContext = createContext(null);
 
-export function GameConnectionProvider({ gameId, children }) {
+export function GameConnectionProvider({ children }) {
+  const [game, setGame] = useState(null);
+  const gameId = game?.gameId ?? null;
   const connectionRef = useRef(null);
   // Latest consumer handlers, read indirectly so the connection never closes
   // over stale callbacks.
@@ -43,12 +49,16 @@ export function GameConnectionProvider({ gameId, children }) {
     [gameId],
   );
 
+  const getConnection = useCallback(() => connectionRef.current, []);
+
   const setHandlers = useCallback((handlers) => {
     handlersRef.current = handlers ?? {};
   }, []);
 
   return (
-    <GameConnectionContext.Provider value={{ sendMove, setHandlers }}>
+    <GameConnectionContext.Provider
+      value={{ game, setGame, getConnection, sendMove, setHandlers }}
+    >
       {children}
     </GameConnectionContext.Provider>
   );

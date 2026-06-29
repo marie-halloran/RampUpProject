@@ -1,18 +1,15 @@
-import { useState } from 'react';
 import Lobby from './components/Lobby';
 import GameView from './components/GameView';
-import { GameConnectionProvider } from './context/GameConnectionContext';
+import { useGameConnection } from './context/GameConnectionContext';
 import './App.css';
 
 function App() {
-  const [game, setGame] = useState(null);
+  const { game, setGame } = useGameConnection();
 
   return (
     <main className="app">
       {game ? (
-        <GameConnectionProvider key={game.gameId} gameId={game.gameId}>
-          <GameView game={game} onLeave={() => setGame(null)} />
-        </GameConnectionProvider>
+        <GameView game={game} onLeave={() => setGame(null)} />
       ) : (
         <Lobby onGameReady={setGame} />
       )}
