@@ -21,7 +21,7 @@ function delay(ms = 250) {
  * @returns {Promise<{ gameId: string, sessionId: string, color: 'w', players: string[] }>}
  */
 export async function createGame() {
-  const res = await fetch(`${API_BASE_URL}/games`, { method: 'POST' });
+  const res = await fetch(`${API_BASE_URL}/game`, { method: 'POST' });
   if (!res.ok) throw new Error(`Failed to create game (${res.status})`);
   return res.json();
 }
@@ -34,7 +34,7 @@ export async function createGame() {
 export async function joinGame(gameId) {
   const id = gameId.trim().toUpperCase();
   if (!id) throw new Error('Game code is required');
-  const res = await fetch(`${API_BASE_URL}/games/${id}/join`, {
+  const res = await fetch(`${API_BASE_URL}/game/${id}/join`, {
     method: 'POST',
   });
   if (!res.ok) throw new Error(`Failed to join game (${res.status})`);
@@ -47,7 +47,7 @@ export async function joinGame(gameId) {
  * @param {object} snapshot board snapshot from toBoardSnapshot()
  */
 export async function sendMove(gameId, snapshot) {
-  const res = await fetch(`${API_BASE_URL}/games/${gameId}/moves`, {
+  const res = await fetch(`${API_BASE_URL}/game/${gameId}/moves`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(snapshot),

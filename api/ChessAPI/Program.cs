@@ -34,7 +34,15 @@ app.UseCors("frontend");
 app.UseAuthorization();
 
 app.MapStaticAssets();
-app.MapHub<GameHub>("/game");
+app.MapHub<GameHub>("/live");
+app.MapPost("/game", async (HttpContext context) =>
+{
+    var gameId = Guid.NewGuid().ToString();
+    context.Response.StatusCode = 201;
+    await context.Response.WriteAsJsonAsync(new { gameId });
+    //Propogate this info to cosmosdb and orleans so that the game can be created and tracked
+});
+
 
 app.MapRazorPages()
    .WithStaticAssets();
