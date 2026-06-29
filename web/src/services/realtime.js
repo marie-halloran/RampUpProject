@@ -46,6 +46,11 @@ export function connectToGame(gameId, handlers = {}) {
     }
   });
 
+  // ChatHub broadcasts ReceiveMove(snapshot) to the other clients.
+  connection.on('ReceiveMove', (snapshot) => {
+    handlers.onOpponentMove?.(snapshot);
+  });
+
   connection
     .start()
     .then(() => connection.invoke('SendMessage', 'you', `joined:${gameId}`))
@@ -59,6 +64,10 @@ export function connectToGame(gameId, handlers = {}) {
     send: (message) =>
       connection.state === 'Connected'
         ? connection.invoke('SendMessage', 'you', message)
+        : Promise.resolve(),
+    sendMove: (gameId, snapshot) =>
+      connection.state === 'Connected'
+        ? connection.invoke('SendMove', gameId, snapshot)
         : Promise.resolve(),
   };
 }

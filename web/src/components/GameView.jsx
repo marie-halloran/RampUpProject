@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import ChessBoard from './ChessBoard';
 import { createInitialBoard, toBoardSnapshot } from '../game/chessSetup';
-import { sendMove } from '../services/api';
 import { connectToGame } from '../services/realtime';
 
 /**
@@ -33,12 +32,8 @@ export default function GameView({ game, onLeave }) {
     setBoard(nextBoard);
     setLastMove(move);
     setSyncState('sending');
-
-    // Broadcast the move over the live connection (no-op until connected).
-    connectionRef.current?.send(`move:${move.from}-${move.to}`);
-
     try {
-      await sendMove(game.gameId, toBoardSnapshot(nextBoard));
+      await connectionRef.current?.sendMove(game.gameId, toBoardSnapshot(nextBoard));
       setSyncState('idle');
     } catch {
       setSyncState('error');
