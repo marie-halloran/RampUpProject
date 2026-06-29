@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Lobby from './components/Lobby';
 import GameView from './components/GameView';
+import { GameConnectionProvider } from './context/GameConnectionContext';
 import './App.css';
 
 function App() {
@@ -9,7 +10,9 @@ function App() {
   return (
     <main className="app">
       {game ? (
-        <GameView game={game} onLeave={() => setGame(null)} />
+        <GameConnectionProvider key={game.gameId} gameId={game.gameId}>
+          <GameView game={game} onLeave={() => setGame(null)} />
+        </GameConnectionProvider>
       ) : (
         <Lobby onGameReady={setGame} />
       )}

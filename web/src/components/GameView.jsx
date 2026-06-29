@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import ChessBoard from './ChessBoard';
 import { createInitialBoard, toBoardSnapshot } from '../game/chessSetup';
-import { connectToGame } from '../services/realtime';
+import { useGameConnection } from '../context/GameConnectionContext';
 
 /**
  * Active game screen: shows the live board, player presence and move status.
@@ -11,29 +11,25 @@ export default function GameView({ game, onLeave }) {
   const [opponent, setOpponent] = useState(null);
   const [lastMove, setLastMove] = useState(null);
   const [syncState, setSyncState] = useState('idle'); // idle | sending | error
-  const connectionRef = useRef(null);
+  const { sendMove, setHandlers } = useGameConnection();
 
-  // Subscribe to live updates for this game (opponent presence + moves).
+  // Route live updates for this game (opponent presence + moves) into local state.
   useEffect(() => {
-    const connection = connectToGame(game.gameId, {
+    setHandlers({
       onOpponentJoined: (player) => setOpponent(player),
       onOpponentMove: (snapshot) => {
         if (snapshot?.squares) setBoard(snapshot.squares);
       },
     });
-    connectionRef.current = connection;
-    return () => {
-      connectionRef.current = null;
-      connection.disconnect();
-    };
-  }, [game.gameId]);
+    return () => setHandlers({});
+  }, [setHandlers]);
 
   async function handleMove(nextBoard, move) {
     setBoard(nextBoard);
     setLastMove(move);
     setSyncState('sending');
     try {
-      await connectionRef.current?.sendMove(game.gameId, toBoardSnapshot(nextBoard));
+      await sendMove(toBoardSnapshot(nextBoard));
       setSyncState('idle');
     } catch {
       setSyncState('error');
