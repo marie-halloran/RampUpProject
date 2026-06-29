@@ -1,0 +1,26 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+
+env:
+  AKS_CLUSTER: chess-api-aks
+  AKS_RESOURCE_GROUP: chess-app-rg
+  IMAGE_REPO: chessapi
+
+jobs:
+  build:
+    name: Build Image
+    runs-on: ubuntu-latest
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tag }}
+      image: ${{ steps.meta.outputs.image }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
