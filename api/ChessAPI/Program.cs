@@ -34,7 +34,8 @@ app.UseCors("frontend");
 app.UseAuthorization();
 
 app.MapStaticAssets();
-app.MapHub<ChatHub>("/chatHub");
+app.MapHub<GameHub>("/game");
+
 app.MapRazorPages()
    .WithStaticAssets();
 

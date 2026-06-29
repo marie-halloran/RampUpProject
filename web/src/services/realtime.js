@@ -28,14 +28,14 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
  */
 export function connectToGame(gameId, handlers = {}) {
   const connection = new HubConnectionBuilder()
-    .withUrl(`${API_BASE_URL}/chatHub`, {
+    .withUrl(`${API_BASE_URL}/game`, {
       transport: HttpTransportType.WebSockets,
     })
     .withAutomaticReconnect()
     .configureLogging(LogLevel.Information)
     .build();
 
-  // ChatHub broadcasts ReceiveMessage(user, message) to every client.
+  // GameHub broadcasts ReceiveMessage(user, message) to every client.
   connection.on('ReceiveMessage', (user, message) => {
     handlers.onMessage?.(user, message);
 
@@ -45,7 +45,7 @@ export function connectToGame(gameId, handlers = {}) {
     }
   });
 
-  // ChatHub broadcasts ReceiveMove(snapshot) to the other clients.
+  // GameHub broadcasts ReceiveMove(snapshot) to the other clients.
   connection.on('ReceiveMove', (snapshot) => {
     handlers.onOpponentMove?.(snapshot);
   });
