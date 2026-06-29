@@ -25,7 +25,7 @@ namespace ChessAPI.Hubs
 
         public async Task JoinGame(string gameId)
         {
-            
+
             await Groups.AddToGroupAsync(Context.ConnectionId, gameId);
             Console.WriteLine($"game joined: {gameId}");
         }
@@ -39,6 +39,15 @@ namespace ChessAPI.Hubs
             Console.WriteLine($"game created: {gameId}");
             //Create a game grain in orleans and store the gameId there so that it can be tracked
             return gameId;
+        }
+
+        public async Task CloseGame(string gameId)
+        {
+            var grain = _grainFactory.GetGrain<IGameGrain>(gameId);
+            var result = grain.Close();
+            Console.WriteLine(result);
+            await Clients.Others.SendAsync("GameClosed", gameId);
+            //Instead of just sending moves back to client right away, will send to orleans
         }
     }
 }
