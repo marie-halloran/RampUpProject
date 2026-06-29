@@ -5,7 +5,7 @@
 // join the hub, announce ourselves with SendMessage, and surface any
 // ReceiveMessage broadcasts back through the existing handler shape.
 //
-// Base URL defaults to the local backend; override with VITE_API_BASE_URL.
+// Base URL comes from VITE_API_BASE_URL.
 
 import {
   HubConnectionBuilder,
@@ -13,8 +13,7 @@ import {
   LogLevel,
 } from '@microsoft/signalr';
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5242';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 /**
  * Subscribe to live updates for a game.
