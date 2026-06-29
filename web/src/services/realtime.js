@@ -15,6 +15,32 @@ import {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
+function buildConnection() {
+  return new HubConnectionBuilder()
+    .withUrl(`${API_BASE_URL}/game`, {
+      transport: HttpTransportType.WebSockets,
+    })
+    .withAutomaticReconnect()
+    .configureLogging(LogLevel.Information)
+    .build();
+}
+
+/**
+ * Create a new game on the server and resolve with its id.
+ * Opens a short-lived connection just to invoke the hub's CreateGame.
+ *
+ * @returns {Promise<string>} the new gameId
+ */
+export async function createGame() {
+  const connection = buildConnection();
+  await connection.start();
+  try {
+    return await connection.invoke('CreateGame');
+  } finally {
+    await connection.stop();
+  }
+}
+
 /**
  * Subscribe to live updates for a game.
  *
@@ -27,23 +53,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
  * @returns {{ disconnect: () => void, send: (message: string) => void }}
  */
 export function connectToGame(gameId, handlers = {}) {
-  const connection = new HubConnectionBuilder()
-    .withUrl(`${API_BASE_URL}/game`, {
-      transport: HttpTransportType.WebSockets,
-    })
-    .withAutomaticReconnect()
-    .configureLogging(LogLevel.Information)
-    .build();
-
-  // GameHub broadcasts ReceiveMessage(user, message) to every client.
-  connection.on('ReceiveMessage', (user, message) => {
-    handlers.onMessage?.(user, message);
-
-    // Treat a "joined" announcement as opponent presence for the game UI.
-    if (typeof message === 'string' && message.startsWith('joined:')) {
-      handlers.onOpponentJoined?.({ name: user, color: 'b' });
-    }
-  });
+  const connection = buildConnection();
 
   // GameHub broadcasts ReceiveMove(snapshot) to the other clients.
   connection.on('ReceiveMove', (snapshot) => {
@@ -52,7 +62,7 @@ export function connectToGame(gameId, handlers = {}) {
 
   connection
     .start()
-    .then(() => connection.invoke('CreateGame', 'you', `joined:${gameId}`))
+    .then(() => connection.invoke('JoinGame', gameId))
     .catch((err) => {
       // eslint-disable-next-line no-console
       console.error('SignalR connection failed:', err);
@@ -60,13 +70,9 @@ export function connectToGame(gameId, handlers = {}) {
 
   return {
     disconnect: () => connection.stop(),
-    send: (message) =>
+    sendMove: (id, snapshot) =>
       connection.state === 'Connected'
-        ? connection.invoke('SendMessage', 'you', message)
-        : Promise.resolve(),
-    sendMove: (gameId, snapshot) =>
-      connection.state === 'Connected'
-        ? connection.invoke('SendMove', gameId, snapshot)
+        ? connection.invoke('SendMove', id, snapshot)
         : Promise.resolve(),
   };
 }

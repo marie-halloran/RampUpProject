@@ -65,7 +65,7 @@ export default function Lobby({ onGameReady }) {
               onChange={(e) => setJoinCode(e.target.value)}
               placeholder="Enter game code"
               aria-label="Game code"
-              maxLength={8}
+              maxLength={50}
             />
             <button
               type="submit"

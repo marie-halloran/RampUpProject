@@ -1,5 +1,6 @@
 using ChessAPI.Hubs;
 using Microsoft.Extensions.Hosting;
+using Orleans.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,6 +15,15 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials());
+});
+
+// Orleans silo. Local clustering + in-memory grain storage for development.
+// The storage provider is named "cosmos" to match [PersistentState("game", "cosmos")]
+// on GameGrain; swap AddMemoryGrainStorage for AddCosmosGrainStorage in production.
+builder.Host.UseOrleans(silo =>
+{
+    silo.UseLocalhostClustering();
+    silo.AddMemoryGrainStorage("cosmos");
 });
 
 
