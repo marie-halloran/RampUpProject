@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import ChessBoard from './ChessBoard';
 import { createInitialBoard, toBoardSnapshot } from '../game/chessSetup';
 import { sendMove } from '../services/api';
@@ -12,6 +12,7 @@ export default function GameView({ game, onLeave }) {
   const [opponent, setOpponent] = useState(null);
   const [lastMove, setLastMove] = useState(null);
   const [syncState, setSyncState] = useState('idle'); // idle | sending | error
+  const connectionRef = useRef(null);
 
   // Subscribe to live updates for this game (opponent presence + moves).
   useEffect(() => {
@@ -21,13 +22,21 @@ export default function GameView({ game, onLeave }) {
         if (snapshot?.squares) setBoard(snapshot.squares);
       },
     });
-    return () => connection.disconnect();
+    connectionRef.current = connection;
+    return () => {
+      connectionRef.current = null;
+      connection.disconnect();
+    };
   }, [game.gameId]);
 
   async function handleMove(nextBoard, move) {
     setBoard(nextBoard);
     setLastMove(move);
     setSyncState('sending');
+
+    // Broadcast the move over the live connection (no-op until connected).
+    connectionRef.current?.send(`move:${move.from}-${move.to}`);
+
     try {
       await sendMove(game.gameId, toBoardSnapshot(nextBoard));
       setSyncState('idle');
