@@ -250,6 +250,34 @@
       "Microsoft.Orleans.Analyzers/10.2.1": {
         "type": "package"
       },
+      "Microsoft.Orleans.Clustering.Cosmos/10.2.1": {
+        "type": "package",
+        "dependencies": {
+          "Azure.Core": "1.51.1",
+          "Microsoft.Azure.Cosmos": "3.57.0",
+          "Microsoft.CodeAnalysis.Analyzers": "3.11.0",
+          "Microsoft.CodeAnalysis.Common": "5.0.0",
+          "Microsoft.CodeAnalysis.Workspaces.Common": "5.0.0",
+          "Microsoft.Extensions.DependencyModel": "10.0.5",
+          "Microsoft.Orleans.Analyzers": "10.2.1",
+          "Microsoft.Orleans.CodeGenerator": "10.2.1",
+          "Microsoft.Orleans.Runtime": "10.2.1",
+          "Newtonsoft.Json": "13.0.4",
+          "System.Drawing.Common": "10.0.3",
+          "System.IO.Hashing": "10.0.3",
+          "System.Memory.Data": "10.0.3"
+        },
+        "compile": {
+          "lib/net10.0/Orleans.Clustering.Cosmos.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net10.0/Orleans.Clustering.Cosmos.dll": {
+            "related": ".xml"
+          }
+        }
+      },
       "Microsoft.Orleans.CodeGenerator/10.2.1": {
         "type": "package",
         "build": {
@@ -1762,6 +1790,23 @@
         "microsoft.orleans.analyzers.nuspec"
       ]
     },
+    "Microsoft.Orleans.Clustering.Cosmos/10.2.1": {
+      "sha512": "TFDCuvesEfGuqaojAXxRZTNjM6SSCBittlUprmGlQ6PwneFNOLg4CNd/R291R0aiGgT5zOooDJeBEztsWCPPMA==",
+      "type": "package",
+      "path": "microsoft.orleans.clustering.cosmos/10.2.1",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "README.md",
+        "lib/net10.0/Orleans.Clustering.Cosmos.dll",
+        "lib/net10.0/Orleans.Clustering.Cosmos.xml",
+        "lib/net8.0/Orleans.Clustering.Cosmos.dll",
+        "lib/net8.0/Orleans.Clustering.Cosmos.xml",
+        "logo_128.png",
+        "microsoft.orleans.clustering.cosmos.10.2.1.nupkg.sha512",
+        "microsoft.orleans.clustering.cosmos.nuspec"
+      ]
+    },
     "Microsoft.Orleans.CodeGenerator/10.2.1": {
       "sha512": "fpLu+40XxOdpIXhuU+0Gs0czFjCHlTTVhhhOJL1Mcr9SX2Kch5fXsK0fg2Hyok1SNPIWr9XUEHimWnhmNBhIvQ==",
       "type": "package",
@@ -2412,6 +2457,7 @@
   },
   "projectFileDependencyGroups": {
     "net10.0": [
+      "Microsoft.Orleans.Clustering.Cosmos >= 10.2.1",
       "Microsoft.Orleans.Persistence.Cosmos >= 10.2.1",
       "Microsoft.Orleans.Server >= 10.2.1"
     ]
@@ -2461,6 +2507,10 @@
         "framework": "net10.0",
         "targetAlias": "net10.0",
         "dependencies": {
+          "Microsoft.Orleans.Clustering.Cosmos": {
+            "target": "Package",
+            "version": "[10.2.1, )"
+          },
           "Microsoft.Orleans.Persistence.Cosmos": {
             "target": "Package",
             "version": "[10.2.1, )"

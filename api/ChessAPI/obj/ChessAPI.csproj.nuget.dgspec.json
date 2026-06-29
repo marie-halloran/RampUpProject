@@ -46,6 +46,10 @@
           "framework": "net10.0",
           "targetAlias": "net10.0",
           "dependencies": {
+            "Microsoft.Orleans.Clustering.Cosmos": {
+              "target": "Package",
+              "version": "[10.2.1, )"
+            },
             "Microsoft.Orleans.Persistence.Cosmos": {
               "target": "Package",
               "version": "[10.2.1, )"
