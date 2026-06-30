@@ -25,6 +25,7 @@ builder.Host.UseOrleans((context, siloBuilder) =>
         var cosmosEndpoint = context.Configuration["Orleans:CosmosEndpoint"]!;
         siloBuilder.UseCosmosClustering(options =>
         {
+            options.IsResourceCreationEnabled = true; //allows the silo to create the database and container if they don't exist
             options.ConfigureCosmosClient(cosmosEndpoint, credential);
             options.DatabaseName = "OrleansAlternativeDatabase";
             options.ContainerName = "OrleansClusteringAlternativeContainer";
