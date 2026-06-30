@@ -48,7 +48,7 @@
           "dependencies": {
             "Azure.Identity": {
               "target": "Package",
-              "version": "[1.21.0, )"
+              "version": "[1.13.2, )"
             },
             "Microsoft.Orleans.Clustering.Cosmos": {
               "target": "Package",
