@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chess-api
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chess-api
+  template:
+    metadata:
+      labels:
+        app: chess-api
+        azure.workload.identity/use: "true"
+    spec:
+      serviceAccountName: chess-api-sa
+      containers:
+        - name: chess-api
+          image: chessapp.azurecr.io/chessapi:latest
+          env:
+            - name: Orleans__CosmosEndpoint
+              value: "https://chess-cosmos.documents.azure.com:443/"
