@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.SignalR;
+using System.Text.Json;
 
 namespace ChessAPI.Hubs
 {
@@ -11,14 +12,12 @@ namespace ChessAPI.Hubs
             _grainFactory = grainFactory;
         }
 
-        public async Task SendMove(string gameId, object snapshot)
+        public async Task SendMove(string gameId, JsonElement snapshot)
         {
             Console.WriteLine($"move received for game {gameId}");
-            Console.WriteLine($"move received for game {snapshot}");
-            IGameGrain grain = _grainFactory.GetGrain<IGameGrain>(gameId);
-            await grain.Update(snapshot.ToString());
+            var grain = _grainFactory.GetGrain<IGameGrain>(gameId);
+            await grain.Update(snapshot.GetRawText());
             await Clients.OthersInGroup(gameId).SendAsync("ReceiveMove", snapshot);
-            //Instead of just sending moves back to client right away, will send to orleans
         }
 
         public async Task JoinGame(string gameId)

@@ -9,7 +9,8 @@ public class GameGrain : Grain, IGameGrain
 
     public async Task Create()
     {
-        if (_state.State.Status == "active") return;      
+        if (_state.State.Status == "active") return;
+        _state.State.GameId = this.GetPrimaryKeyString();
         _state.State.Status = "active";
         await _state.WriteStateAsync();            // persist to Cosmos
     }
@@ -25,7 +26,7 @@ public class GameGrain : Grain, IGameGrain
     public async Task Close()
     {
         _state.State.Status = "ended";
-        await _state.WriteStateAsync();          
-        DeactivateOnIdle();           
+        await _state.WriteStateAsync();
+        DeactivateOnIdle();
     }
 }
