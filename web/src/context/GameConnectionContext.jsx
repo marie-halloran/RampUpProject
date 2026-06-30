@@ -81,10 +81,11 @@ export function GameConnectionProvider({ children }) {
   const leaveGame = useCallback(() => setGame(null), []);
 
   const sendMove = useCallback(
-    (snapshot) => {
+    (snapshot, overrideGameId) => {
       const connection = connectionRef.current;
-      if (!connection || !game) return Promise.resolve();
-      return connection.invoke('SendMove', game.gameId, snapshot);
+      const id = overrideGameId ?? game?.gameId;
+      if (!connection || !id) return Promise.resolve();
+      return connection.invoke('SendMove', id, snapshot);
     },
     [game],
   );

@@ -1,20 +1,19 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useGameConnection } from '../context/GameConnectionContext';
+import { createNewGame } from '../services/realtime';
 
 
 export default function Lobby() {
-  const { createGame, joinGame, ready } = useGameConnection();
   const navigate = useNavigate();
   const [joinCode, setJoinCode] = useState('');
-  const [busy, setBusy] = useState(null); // 'create' | 'join' | null
+  const [busy, setBusy] = useState(null); // 'create' | null
   const [error, setError] = useState('');
 
   async function handleCreate() {
     setError('');
     setBusy('create');
     try {
-      const gameId = await createGame();
+      const gameId = await createNewGame();
       navigate(`/game/${gameId}`);
     } catch (err) {
       setError(err.message ?? 'Could not create game');
@@ -23,18 +22,10 @@ export default function Lobby() {
     }
   }
 
-  async function handleJoin(event) {
+  function handleJoin(event) {
     event.preventDefault();
-    setError('');
-    setBusy('join');
-    try {
-      await joinGame(joinCode, { color: 'b' });
-      navigate(`/game/${joinCode.trim()}`);
-    } catch (err) {
-      setError(err.message ?? 'Could not join game');
-    } finally {
-      setBusy(null);
-    }
+    const trimmed = joinCode.trim();
+    if (trimmed) navigate(`/game/${trimmed}`);
   }
 
   return (
@@ -50,7 +41,7 @@ export default function Lobby() {
             type="button"
             className="primary-btn"
             onClick={handleCreate}
-            disabled={busy !== null || !ready}
+            disabled={busy !== null}
           >
             {busy === 'create' ? 'Creating…' : 'Create game'}
           </button>
@@ -70,9 +61,9 @@ export default function Lobby() {
             <button
               type="submit"
               className="primary-btn"
-              disabled={busy !== null || !ready || joinCode.trim() === ''}
+              disabled={joinCode.trim() === ''}
             >
-              {busy === 'join' ? 'Joining…' : 'Join game'}
+              {'Join game'}
             </button>
           </form>
         </section>

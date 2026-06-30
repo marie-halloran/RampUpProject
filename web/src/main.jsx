@@ -3,14 +3,11 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import App from './App.jsx'
-import { GameConnectionProvider } from './context/GameConnectionContext'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
-      <GameConnectionProvider>
-        <App />
-      </GameConnectionProvider>
+      <App />
     </BrowserRouter>
   </StrictMode>,
 )

@@ -31,3 +31,16 @@ export function buildGameConnection() {
     .build();
 }
 
+/**
+ * Create a new game via a short-lived connection. Returns the new gameId.
+ */
+export async function createNewGame() {
+  const connection = buildGameConnection();
+  await connection.start();
+  try {
+    return await connection.invoke('CreateGame');
+  } finally {
+    await connection.stop();
+  }
+}
+
