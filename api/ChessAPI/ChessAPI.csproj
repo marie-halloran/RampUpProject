@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Azure.Identity" Version="1.21.0" />
     <PackageReference Include="Microsoft.Orleans.Clustering.Cosmos" Version="10.2.1" />
     <PackageReference Include="Microsoft.Orleans.Persistence.Cosmos" Version="10.2.1" />
     <PackageReference Include="Microsoft.Orleans.Server" Version="10.2.1" />

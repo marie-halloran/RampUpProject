@@ -1,4 +1,6 @@
+using Azure.Identity;
 using ChessAPI.Hubs;
+using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Hosting;
 using Orleans;
 using Orleans.Configuration;
@@ -18,7 +20,7 @@ builder.Host.UseOrleans((context, siloBuilder) =>
     }
     else
     {
-        //var credential = new DefaultAzureCredential();
+        var credential = new DefaultAzureCredential();
         siloBuilder.AddCosmosGrainStorage(
                 name: "cosmosStore",
                 configureOptions: options =>
@@ -26,19 +28,19 @@ builder.Host.UseOrleans((context, siloBuilder) =>
                     options.DatabaseName = "OrleansAlternativeDatabase";
                     options.ContainerName = "OrleansClusterAlternativeContainer";
                     options.ContainerThroughputProperties = ThroughputProperties.CreateAutoscaleThroughput(1000);
-                    options.ConfigureCosmosClient("<azure-cosmos-db-nosql-connection-string>");
+                    options.ConfigureCosmosClient("<azure-cosmos-db-nosql-account-endpoint>", credential);
 
                 });
         siloBuilder.AddCosmosGrainStorage(
             name: "profileStore",
-            configureOptions: static options =>
+            configureOptions: options =>
             {
-            options.IsResourceCreationEnabled = true;
-            options.DatabaseName = "OrleansAlternativeDatabase";
-            options.ContainerName = "OrleansStorageAlternativeContainer";
-            options.ContainerThroughputProperties = ThroughputProperties.CreateAutoscaleThroughput(1000);
-            options.ConfigureCosmosClient("<azure-cosmos-db-nosql-connection-string>");
-        });
+                options.IsResourceCreationEnabled = true;
+                options.DatabaseName = "OrleansAlternativeDatabase";
+                options.ContainerName = "OrleansStorageAlternativeContainer";
+                options.ContainerThroughputProperties = ThroughputProperties.CreateAutoscaleThroughput(1000);
+                options.ConfigureCosmosClient("<azure-cosmos-db-nosql-account-endpoint>", credential);
+            });
     }
 });
 
