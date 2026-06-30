@@ -20,17 +20,16 @@ builder.Host.UseOrleans((context, siloBuilder) =>
     }
     else
     {
+        // This is the config for where cosmos will get the storage of the cluster info (ie which silo is active, which is inactive, etc)
         var credential = new DefaultAzureCredential();
-        siloBuilder.AddCosmosGrainStorage(
-                name: "cosmosStore",
-                configureOptions: options =>
-                {
-                    options.DatabaseName = "OrleansAlternativeDatabase";
-                    options.ContainerName = "OrleansClusterAlternativeContainer";
-                    options.ContainerThroughputProperties = ThroughputProperties.CreateAutoscaleThroughput(1000);
-                    options.ConfigureCosmosClient("<azure-cosmos-db-nosql-account-endpoint>", credential);
-
-                });
+        var cosmosEndpoint = context.Configuration["Orleans:CosmosEndpoint"]!;
+        siloBuilder.UseCosmosClustering(options =>
+        {
+            options.ConfigureCosmosClient(cosmosEndpoint, credential);
+            options.DatabaseName = "OrleansAlternativeDatabase";
+            options.ContainerName = "OrleansClusteringAlternativeContainer";
+        });
+        // This is the config for where cosmos will get the storage of the grain state
         siloBuilder.AddCosmosGrainStorage(
             name: "profileStore",
             configureOptions: options =>
@@ -39,7 +38,7 @@ builder.Host.UseOrleans((context, siloBuilder) =>
                 options.DatabaseName = "OrleansAlternativeDatabase";
                 options.ContainerName = "OrleansStorageAlternativeContainer";
                 options.ContainerThroughputProperties = ThroughputProperties.CreateAutoscaleThroughput(1000);
-                options.ConfigureCosmosClient("<azure-cosmos-db-nosql-account-endpoint>", credential);
+                options.ConfigureCosmosClient(cosmosEndpoint, credential);
             });
     }
 });
