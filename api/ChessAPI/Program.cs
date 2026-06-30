@@ -54,7 +54,7 @@ builder.Services.AddCors(options =>
         policy.WithOrigins(
                 "http://localhost:5173",
                 "http://localhost:5174",
-                "https://chess-api-fhb0d8hgd0euasac.b01.azurefd.net")
+                "https://ambitious-moss-05a2e1003.7.azurestaticapps.net")
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials());
