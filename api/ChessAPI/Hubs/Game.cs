@@ -16,9 +16,8 @@ namespace ChessAPI.Hubs
             Console.WriteLine($"move received for game {gameId}");
             Console.WriteLine($"move received for game {snapshot}");
             var grain = _grainFactory.GetGrain<IGameGrain>(gameId);
-            var result = grain.Update(snapshot.ToString());
-            Console.WriteLine(result);
-            await Clients.Others.SendAsync("ReceiveMove", snapshot);
+            await grain.Update(snapshot.ToString());
+            await Clients.OthersInGroup(gameId).SendAsync("ReceiveMove", snapshot);
             //Instead of just sending moves back to client right away, will send to orleans
         }
 
@@ -32,8 +31,7 @@ namespace ChessAPI.Hubs
         {
             var gameId = Guid.NewGuid().ToString();
             var grain = _grainFactory.GetGrain<IGameGrain>(gameId);
-            var result = grain.Create();
-            Console.WriteLine(result);
+            await grain.Create();
             await Groups.AddToGroupAsync(Context.ConnectionId, gameId);
             Console.WriteLine($"game created: {gameId}");
             //Create a game grain in orleans and store the gameId there so that it can be tracked
@@ -43,9 +41,8 @@ namespace ChessAPI.Hubs
         public async Task CloseGame(string gameId)
         {
             var grain = _grainFactory.GetGrain<IGameGrain>(gameId);
-            var result = grain.Close();
-            Console.WriteLine(result);
-            await Clients.Others.SendAsync("GameClosed", gameId);
+            await grain.Close();
+            await Clients.OthersInGroup(gameId).SendAsync("GameClosed", gameId);
             //Instead of just sending moves back to client right away, will send to orleans
         }
     }
