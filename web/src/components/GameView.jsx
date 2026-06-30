@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import ChessBoard from './ChessBoard';
 import { createInitialBoard, toBoardSnapshot } from '../game/chessSetup';
 import { useGameConnection } from '../context/GameConnectionContext';
@@ -6,12 +7,16 @@ import { useGameConnection } from '../context/GameConnectionContext';
 /**
  * Active game screen: shows the live board, player presence and move status.
  */
-export default function GameView({ game, onLeave }) {
+export default function GameView() {
+  const { gameId } = useParams();
+  const navigate = useNavigate();
+  const { game } = useGameConnection();
+  const color = game?.color ?? 'w';
   const [board, setBoard] = useState(() => createInitialBoard());
   const [opponent, setOpponent] = useState(null);
   const [lastMove, setLastMove] = useState(null);
   const [syncState, setSyncState] = useState('idle'); // idle | sending | error
-  const { sendMove, setHandlers } = useGameConnection();
+  const { sendMove, setHandlers, leaveGame } = useGameConnection();
 
   // Route live updates for this game (opponent presence + moves) into local state.
   useEffect(() => {
@@ -40,12 +45,12 @@ export default function GameView({ game, onLeave }) {
     <div className="game-view">
       <header className="game-header">
         <div>
-          <h2>Game {game.gameId}</h2>
+          <h2>Game {gameId}</h2>
           <p className="muted">
-            You are playing {game.color === 'w' ? 'White' : 'Black'}
+            You are playing {color === 'w' ? 'White' : 'Black'}
           </p>
         </div>
-        <button type="button" className="ghost-btn" onClick={onLeave}>
+        <button type="button" className="ghost-btn" onClick={() => { leaveGame(); navigate('/'); }}>
           Leave game
         </button>
       </header>

@@ -1,13 +1,11 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useGameConnection } from '../context/GameConnectionContext';
 
-/**
- * Landing screen where a player can create a new game or join an existing one
- * by entering a game code. Both actions run over the shared connection and set
- * the active game on the context.
- */
+
 export default function Lobby() {
   const { createGame, joinGame, ready } = useGameConnection();
+  const navigate = useNavigate();
   const [joinCode, setJoinCode] = useState('');
   const [busy, setBusy] = useState(null); // 'create' | 'join' | null
   const [error, setError] = useState('');
@@ -16,7 +14,8 @@ export default function Lobby() {
     setError('');
     setBusy('create');
     try {
-      await createGame();
+      const gameId = await createGame();
+      navigate(`/game/${gameId}`);
     } catch (err) {
       setError(err.message ?? 'Could not create game');
     } finally {
@@ -30,6 +29,7 @@ export default function Lobby() {
     setBusy('join');
     try {
       await joinGame(joinCode, { color: 'b' });
+      navigate(`/game/${joinCode.trim()}`);
     } catch (err) {
       setError(err.message ?? 'Could not join game');
     } finally {
