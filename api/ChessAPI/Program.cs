@@ -1,35 +1,45 @@
 using ChessAPI.Hubs;
 using Microsoft.Extensions.Hosting;
+using Orleans;
+using Orleans.Configuration;
 using Orleans.Hosting;
-using Azure.Identity;
-using Microsoft.Azure.Cosmos;
-
+using System;
+using System.Threading.Tasks;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.UseOrleans(siloBuilder =>
+builder.Host.UseOrleans((context, siloBuilder) =>
 {
-    siloBuilder.UseCosmosClustering(
-    configureOptions: static options =>
+
+    var local = context.HostingEnvironment.IsDevelopment();
+    if (local)
     {
-        options.IsResourceCreationEnabled = true;
-        options.DatabaseName = "OrleansAlternativeDatabase";
-        options.ContainerName = "OrleansClusterAlternativeContainer";
-        options.ContainerThroughputProperties = ThroughputProperties.CreateAutoscaleThroughput(1000);
-        options.ConfigureCosmosClient("<azure-cosmos-db-nosql-connection-string>");
-    });
-    
-    siloBuilder.AddCosmosGrainStorage(
-    name: "profileStore",
-    configureOptions: static options =>
+        siloBuilder.UseLocalhostClustering();
+    }
+    else
     {
-        options.IsResourceCreationEnabled = true;
-        options.DatabaseName = "OrleansAlternativeDatabase";
-        options.ContainerName = "OrleansStorageAlternativeContainer";
-        options.ContainerThroughputProperties = ThroughputProperties.CreateAutoscaleThroughput(1000);
-        options.ConfigureCosmosClient("<azure-cosmos-db-nosql-connection-string>");
-    });
-    
+        //var credential = new DefaultAzureCredential();
+        siloBuilder.AddCosmosGrainStorage(
+                name: "cosmosStore",
+                configureOptions: options =>
+                {
+                    options.DatabaseName = "OrleansAlternativeDatabase";
+                    options.ContainerName = "OrleansClusterAlternativeContainer";
+                    options.ContainerThroughputProperties = ThroughputProperties.CreateAutoscaleThroughput(1000);
+                    options.ConfigureCosmosClient("<azure-cosmos-db-nosql-connection-string>");
+
+                });
+        siloBuilder.AddCosmosGrainStorage(
+            name: "profileStore",
+            configureOptions: static options =>
+            {
+            options.IsResourceCreationEnabled = true;
+            options.DatabaseName = "OrleansAlternativeDatabase";
+            options.ContainerName = "OrleansStorageAlternativeContainer";
+            options.ContainerThroughputProperties = ThroughputProperties.CreateAutoscaleThroughput(1000);
+            options.ConfigureCosmosClient("<azure-cosmos-db-nosql-connection-string>");
+        });
+    }
 });
 
 // Add services to the container.
