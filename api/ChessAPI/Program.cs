@@ -51,7 +51,10 @@ builder.Services.AddSignalR();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("frontend", policy =>
-        policy.WithOrigins("http://localhost:5173", "http://localhost:5174")
+        policy.WithOrigins(
+                "http://localhost:5173",
+                "http://localhost:5174",
+                "https://chess-api-fhb0d8hgd0euasac.b01.azurefd.net")
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials());
@@ -65,11 +68,7 @@ var app = builder.Build();
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-    app.UseHsts();
 }
-
-app.UseHttpsRedirection();
 
 app.UseRouting();
 
@@ -77,6 +76,7 @@ app.UseCors("frontend");
 
 app.UseAuthorization();
 
+app.MapGet("/healthz", () => Results.Ok());
 app.MapStaticAssets();
 app.MapHub<GameHub>("/game");
 
