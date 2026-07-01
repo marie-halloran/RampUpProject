@@ -47,6 +47,7 @@ builder.Host.UseOrleans((context, siloBuilder) =>
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddSignalR();
+builder.Services.AddControllers();
 
 builder.Services.AddCors(options =>
 {
@@ -79,6 +80,7 @@ app.UseAuthorization();
 app.MapGet("/healthz", () => Results.Ok());
 app.MapStaticAssets();
 app.MapHub<GameHub>("/game");
+app.MapControllers();
 
 
 app.MapRazorPages()
