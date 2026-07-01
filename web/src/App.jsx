@@ -8,6 +8,7 @@ function App() {
     <main className="app">
       <Routes>
         <Route path="/" element={<Lobby />} />
+        <Route path="/game" element={<GameView />} />
         <Route path="/game/:gameId" element={<GameView />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

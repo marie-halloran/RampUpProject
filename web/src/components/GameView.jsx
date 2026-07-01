@@ -8,9 +8,9 @@ import { useGameHub } from '../hooks/useGameHub';
  * Active game screen: shows the live board, player presence and move status.
  */
 export default function GameView() {
-  const { gameId } = useParams();
+  const { gameId: urlGameId } = useParams();
   const navigate = useNavigate();
-  const { ready, sendMove, setHandlers } = useGameHub(gameId);
+  const { ready, gameId, sendMove, setHandlers } = useGameHub(urlGameId);
   const [board, setBoard] = useState(() => createInitialBoard());
   const [opponent, setOpponent] = useState(null);
   const [lastMove, setLastMove] = useState(null);
@@ -43,7 +43,7 @@ export default function GameView() {
     <div className="game-view">
       <header className="game-header">
         <div>
-          <h2>Game {gameId}</h2>
+          <h2>{gameId ? `Game ${gameId}` : 'Creating game…'}</h2>
           <p className="muted">{ready ? 'Connected' : 'Connecting…'}</p>
         </div>
         <button type="button" className="ghost-btn" onClick={() => navigate('/')}>

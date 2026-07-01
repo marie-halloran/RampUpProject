@@ -1,25 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createNewGame } from '../services/realtime';
-
 
 export default function Lobby() {
   const navigate = useNavigate();
   const [joinCode, setJoinCode] = useState('');
-  const [busy, setBusy] = useState(null); // 'create' | null
   const [error, setError] = useState('');
 
-  async function handleCreate() {
-    setError('');
-    setBusy('create');
-    try {
-      const gameId = await createNewGame();
-      navigate(`/game/${gameId}`);
-    } catch (err) {
-      setError(err.message ?? 'Could not create game');
-    } finally {
-      setBusy(null);
-    }
+  function handleCreate() {
+    navigate('/game');
   }
 
   function handleJoin(event) {
@@ -41,9 +29,8 @@ export default function Lobby() {
             type="button"
             className="primary-btn"
             onClick={handleCreate}
-            disabled={busy !== null}
           >
-            {busy === 'create' ? 'Creating…' : 'Create game'}
+            Create game
           </button>
         </section>
 
