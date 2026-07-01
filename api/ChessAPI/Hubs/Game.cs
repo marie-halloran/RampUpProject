@@ -1,3 +1,4 @@
+using ChessAPI.Models;
 using Microsoft.AspNetCore.SignalR;
 using System.Text.Json;
 
@@ -35,10 +36,13 @@ namespace ChessAPI.Hubs
             var currentBoard = await gameGrain.GetBoard();
             await gameGrain.AddPlayer(playerId);
             var players = await gameGrain.GetPlayers();
-
+            List<PlayerState> playersInfo = new List<PlayerState>();
+            foreach (string p1 in players) {   
+                playersInfo.Add(await _grainFactory.GetGrain<IPlayerGrain>(p1).GetPlayer());
+            }
             await Groups.AddToGroupAsync(Context.ConnectionId, gameId);
             await Clients.OthersInGroup(gameId).SendAsync("OpponentJoined", new { name = playerName });
-            return new { board = currentBoard, players };
+            return new { board = currentBoard, players = playersInfo };
         }
         public async Task<string> CreateGame(string playerName)
         {

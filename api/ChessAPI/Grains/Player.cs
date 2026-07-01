@@ -18,6 +18,8 @@ public class PlayerGrain : Grain, IPlayerGrain
         await _state.WriteStateAsync();
     }
 
+    public Task<PlayerState> GetPlayer() => Task.FromResult(_state.State);
+
     public async Task GoOnline()
     {
         _state.State.IsOnline = true;
