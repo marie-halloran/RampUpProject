@@ -1,0 +1,56 @@
+# Azure Load Testing configuration
+# Used by the Azure Load Testing GitHub Action or Azure DevOps task.
+# Reference: https://learn.microsoft.com/azure/load-testing/reference-test-config-yaml
+#
+# Run:
+#   az load test create --load-test-resource <resource> \
+#                       --resource-group <rg> \
+#                       --test-id chess-load-test \
+#                       --load-test-config-file load-test-config.yaml
+
+version: v0.1
+testId: chess-load-test
+displayName: Chess API Load Test
+description: >
+  1000 concurrent players (500 games × 2 players), ~1 move/second per player,
+  total duration under 5 minutes.
+
+# Path to the JMeter test plan (relative to this file)
+testPlan: chess-load-test.jmx
+
+# Number of parallel JMeter engine instances.
+# 1 engine handles 500 threads comfortably for this workload.
+# Increase to 2+ to distribute threads across more engines for higher scale.
+engineInstances: 1
+
+# Additional files uploaded alongside the JMX.
+# The WebSocket sampler plugin JAR must be present so JMeter can load the
+# eu.luminis.jmeter.wssampler.* classes.  Download the JAR from:
+#   https://github.com/Luminis-Arnhem/jmeter-websocket-samplers/releases
+configurationFiles:
+  - jmeter-websocket-samplers-1.2.8.jar
+
+# JMeter properties injected via -J flags at runtime.
+# Override these values to point at your deployed environment.
+env:
+  - name: target_host
+    value: localhost           # Replace with your app hostname, e.g. myapp.azurewebsites.net
+
+  - name: target_port
+    value: "443"               # 443 for HTTPS, 5000 for local HTTP
+
+  - name: scheme
+    value: https               # http or https
+
+  - name: use_tls
+    value: "true"              # true for wss://, false for ws://
+
+  - name: move_iterations
+    value: "100"               # 100 × 2s = 200s of move traffic per game
+
+# Failure criteria — the test is marked failed if either threshold is breached.
+failureCriteria:
+  # 90th-percentile response time for any sampler must stay under 2 seconds
+  - p90(response_time_ms) > 2000
+  # Error rate across all samplers must stay under 5%
+  - percentage(error) > 5

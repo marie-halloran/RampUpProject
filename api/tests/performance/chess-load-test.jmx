@@ -1,0 +1,647 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.3">
+  <hashTree>
+
+    <!-- ================================================================ -->
+    <!-- TEST PLAN                                                         -->
+    <!-- ================================================================ -->
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan"
+              testname="Chess API Performance Test" enabled="true">
+      <stringProp name="TestPlan.comments">500 games × 2 players = 1000 concurrent WebSocket connections; ~1 move/s per player; total duration &lt;5 min</stringProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
+      <boolProp name="TestPlan.tearDown_on_shutdown">true</boolProp>
+
+      <elementProp name="TestPlan.user_defined_variables"
+                   elementType="Arguments"
+                   guiclass="ArgumentsPanel"
+                   testclass="Arguments"
+                   testname="User Defined Variables"
+                   enabled="true">
+        <collectionProp name="Arguments.arguments">
+
+          <!-- Target host — override with Azure Load Testing parameter "target_host" -->
+          <elementProp name="TARGET_HOST" elementType="Argument">
+            <stringProp name="Argument.name">TARGET_HOST</stringProp>
+            <stringProp name="Argument.value">${__P(target_host,localhost)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+
+          <!-- Target port — override with "target_port" -->
+          <elementProp name="TARGET_PORT" elementType="Argument">
+            <stringProp name="Argument.name">TARGET_PORT</stringProp>
+            <stringProp name="Argument.value">${__P(target_port,5000)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+
+          <!-- HTTP scheme: http or https — override with "scheme" -->
+          <elementProp name="SCHEME" elementType="Argument">
+            <stringProp name="Argument.name">SCHEME</stringProp>
+            <stringProp name="Argument.value">${__P(scheme,http)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+
+          <!-- WebSocket TLS: true or false — override with "use_tls" -->
+          <elementProp name="USE_TLS" elementType="Argument">
+            <stringProp name="Argument.name">USE_TLS</stringProp>
+            <stringProp name="Argument.value">${__P(use_tls,false)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+
+          <!-- Number of move iterations per game — override with "move_iterations" -->
+          <!-- 100 iterations × 2s per iteration = 200s of sustained move traffic -->
+          <elementProp name="MOVE_ITERATIONS" elementType="Argument">
+            <stringProp name="Argument.name">MOVE_ITERATIONS</stringProp>
+            <stringProp name="Argument.value">${__P(move_iterations,100)}</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+
+        </collectionProp>
+      </elementProp>
+    </TestPlan>
+
+    <hashTree>
+
+      <!-- ============================================================== -->
+      <!-- HTTP REQUEST DEFAULTS  (inherited by all HTTP samplers)         -->
+      <!-- ============================================================== -->
+      <ConfigTestElement guiclass="HttpDefaultsGui"
+                         testclass="ConfigTestElement"
+                         testname="HTTP Request Defaults"
+                         enabled="true">
+        <elementProp name="HTTPsampler.Arguments" elementType="Arguments"
+                     guiclass="HTTPArgumentsPanel" testclass="Arguments">
+          <collectionProp name="Arguments.arguments"/>
+        </elementProp>
+        <stringProp name="HTTPSampler.domain">${TARGET_HOST}</stringProp>
+        <stringProp name="HTTPSampler.port">${TARGET_PORT}</stringProp>
+        <stringProp name="HTTPSampler.protocol">${SCHEME}</stringProp>
+        <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+        <intProp name="HTTPSampler.connect_timeout">10000</intProp>
+        <intProp name="HTTPSampler.response_timeout">30000</intProp>
+      </ConfigTestElement>
+      <hashTree/>
+
+      <!-- JSON Content-Type applied to all HTTP requests -->
+      <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager"
+                     testname="JSON Content-Type Header" enabled="true">
+        <collectionProp name="HeaderManager.headers">
+          <elementProp name="Content-Type" elementType="Header">
+            <stringProp name="Header.name">Content-Type</stringProp>
+            <stringProp name="Header.value">application/json</stringProp>
+          </elementProp>
+        </collectionProp>
+      </HeaderManager>
+      <hashTree/>
+
+      <!-- ============================================================== -->
+      <!-- MAIN THREAD GROUP                                               -->
+      <!-- 500 threads = 500 games = 1000 virtual players                 -->
+      <!-- Ramp-up: 60s  |  Loop count: 1 (each thread runs once)        -->
+      <!-- ============================================================== -->
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup"
+                   testname="Chess Game Load (500 games / 1000 players)"
+                   enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller"
+                     elementType="LoopController"
+                     guiclass="LoopControlPanel"
+                     testclass="LoopController"
+                     testname="Loop Controller"
+                     enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">500</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">60</stringProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"></stringProp>
+        <stringProp name="ThreadGroup.delay"></stringProp>
+      </ThreadGroup>
+
+      <hashTree>
+
+        <!-- ==================================================================
+             INIT: Set per-thread variables that cannot be embedded in XML
+               RS             = ASCII 0x1E record separator (SignalR delim)
+               BOARD_SNAPSHOT = initial chess board as JSON array
+             ================================================================== -->
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler"
+                       testname="Init Thread Variables" enabled="true">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="script"><![CDATA[
+// SignalR JSON protocol terminates every message with ASCII record separator (0x1E).
+vars.put("RS", "\u001e")
+
+// Static board snapshot used for every SendMove call.
+// Format: 8×8 JSON array of piece codes (colour+type) or null for empty squares.
+// Row 0 = rank 8 (black back rank), row 7 = rank 1 (white back rank).
+// This tests throughput rather than game logic — move validation lives in the grain.
+def board = '[' +
+  '["bR","bN","bB","bQ","bK","bB","bN","bR"],' +
+  '["bP","bP","bP","bP","bP","bP","bP","bP"],' +
+  '[null,null,null,null,null,null,null,null],' +
+  '[null,null,null,null,null,null,null,null],' +
+  '[null,null,null,null,null,null,null,null],' +
+  '[null,null,null,null,null,null,null,null],' +
+  '["wP","wP","wP","wP","wP","wP","wP","wP"],' +
+  '["wR","wN","wB","wQ","wK","wB","wN","wR"]' +
+']'
+vars.put("BOARD_SNAPSHOT", board)
+
+SampleResult.setSuccessful(true)
+SampleResult.setResponseCode("200")
+SampleResult.setResponseMessage("Thread variables initialised")
+          ]]></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+
+        <!-- ============================================================ -->
+        <!-- PHASE 1 — Create two players and a game via REST             -->
+        <!-- ============================================================ -->
+        <TransactionController guiclass="TransactionControllerGui"
+                               testclass="TransactionController"
+                               testname="01 - Create Players and Game"
+                               enabled="true">
+          <boolProp name="TransactionController.includeTimers">false</boolProp>
+          <boolProp name="TransactionController.parent">false</boolProp>
+        </TransactionController>
+        <hashTree>
+
+          <!-- POST /api/player  (Player 1 — white) -->
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui"
+                            testclass="HTTPSamplerProxy"
+                            testname="Create Player 1 (White)"
+                            enabled="true">
+            <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+              <collectionProp name="Arguments.arguments">
+                <elementProp name="" elementType="HTTPArgument">
+                  <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                  <stringProp name="Argument.value">{"playerName":"white-${__threadNum}","color":"white"}</stringProp>
+                  <stringProp name="Argument.metadata">=</stringProp>
+                </elementProp>
+              </collectionProp>
+            </elementProp>
+            <stringProp name="HTTPSampler.path">/api/player</stringProp>
+            <stringProp name="HTTPSampler.method">POST</stringProp>
+            <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+            <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+            <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+            <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          </HTTPSamplerProxy>
+          <hashTree>
+            <JSONPathExtractor guiclass="JSONPathExtractorGui"
+                               testclass="JSONPathExtractor"
+                               testname="Extract playerId1"
+                               enabled="true">
+              <stringProp name="JSONPathExtractor.referenceName">playerId1</stringProp>
+              <stringProp name="JSONPathExtractor.jsonPathExpr">$.playerId</stringProp>
+              <stringProp name="JSONPathExtractor.defaultValue">ERROR_playerId1_NOT_FOUND</stringProp>
+            </JSONPathExtractor>
+            <ResponseAssertion guiclass="AssertionGui"
+                               testclass="ResponseAssertion"
+                               testname="Assert playerId1 present"
+                               enabled="true">
+              <collectionProp name="Asserion.test_strings">
+                <stringProp name="49586">playerId</stringProp>
+              </collectionProp>
+              <stringProp name="Assertion.custom_message">Player 1 creation failed — no playerId in response</stringProp>
+              <intProp name="Assertion.test_type">2</intProp>
+              <boolProp name="Assertion.assume_success">false</boolProp>
+            </ResponseAssertion>
+          </hashTree>
+
+          <!-- POST /api/player  (Player 2 — black) -->
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui"
+                            testclass="HTTPSamplerProxy"
+                            testname="Create Player 2 (Black)"
+                            enabled="true">
+            <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+              <collectionProp name="Arguments.arguments">
+                <elementProp name="" elementType="HTTPArgument">
+                  <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                  <stringProp name="Argument.value">{"playerName":"black-${__threadNum}","color":"black"}</stringProp>
+                  <stringProp name="Argument.metadata">=</stringProp>
+                </elementProp>
+              </collectionProp>
+            </elementProp>
+            <stringProp name="HTTPSampler.path">/api/player</stringProp>
+            <stringProp name="HTTPSampler.method">POST</stringProp>
+            <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+            <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+            <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+            <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          </HTTPSamplerProxy>
+          <hashTree>
+            <JSONPathExtractor guiclass="JSONPathExtractorGui"
+                               testclass="JSONPathExtractor"
+                               testname="Extract playerId2"
+                               enabled="true">
+              <stringProp name="JSONPathExtractor.referenceName">playerId2</stringProp>
+              <stringProp name="JSONPathExtractor.jsonPathExpr">$.playerId</stringProp>
+              <stringProp name="JSONPathExtractor.defaultValue">ERROR_playerId2_NOT_FOUND</stringProp>
+            </JSONPathExtractor>
+            <ResponseAssertion guiclass="AssertionGui"
+                               testclass="ResponseAssertion"
+                               testname="Assert playerId2 present"
+                               enabled="true">
+              <collectionProp name="Asserion.test_strings">
+                <stringProp name="49586">playerId</stringProp>
+              </collectionProp>
+              <stringProp name="Assertion.custom_message">Player 2 creation failed — no playerId in response</stringProp>
+              <intProp name="Assertion.test_type">2</intProp>
+              <boolProp name="Assertion.assume_success">false</boolProp>
+            </ResponseAssertion>
+          </hashTree>
+
+          <!-- POST /api/game  (created by Player 1) -->
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui"
+                            testclass="HTTPSamplerProxy"
+                            testname="Create Game"
+                            enabled="true">
+            <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+              <collectionProp name="Arguments.arguments">
+                <elementProp name="" elementType="HTTPArgument">
+                  <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                  <stringProp name="Argument.value">{"playerId":"${playerId1}"}</stringProp>
+                  <stringProp name="Argument.metadata">=</stringProp>
+                </elementProp>
+              </collectionProp>
+            </elementProp>
+            <stringProp name="HTTPSampler.path">/api/game</stringProp>
+            <stringProp name="HTTPSampler.method">POST</stringProp>
+            <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+            <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+            <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+            <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          </HTTPSamplerProxy>
+          <hashTree>
+            <JSONPathExtractor guiclass="JSONPathExtractorGui"
+                               testclass="JSONPathExtractor"
+                               testname="Extract gameId"
+                               enabled="true">
+              <stringProp name="JSONPathExtractor.referenceName">gameId</stringProp>
+              <stringProp name="JSONPathExtractor.jsonPathExpr">$.gameId</stringProp>
+              <stringProp name="JSONPathExtractor.defaultValue">ERROR_gameId_NOT_FOUND</stringProp>
+            </JSONPathExtractor>
+            <ResponseAssertion guiclass="AssertionGui"
+                               testclass="ResponseAssertion"
+                               testname="Assert gameId present"
+                               enabled="true">
+              <collectionProp name="Asserion.test_strings">
+                <stringProp name="49586">gameId</stringProp>
+              </collectionProp>
+              <stringProp name="Assertion.custom_message">Game creation failed — no gameId in response</stringProp>
+              <intProp name="Assertion.test_type">2</intProp>
+              <boolProp name="Assertion.assume_success">false</boolProp>
+            </ResponseAssertion>
+          </hashTree>
+
+        </hashTree>
+        <!-- end Phase 1 -->
+
+        <!-- ============================================================ -->
+        <!-- PHASE 2 — Connect Player 1 via SignalR WebSocket             -->
+        <!--   negotiate → open WS → send handshake (wait for {}) → join  -->
+        <!-- ============================================================ -->
+        <TransactionController guiclass="TransactionControllerGui"
+                               testclass="TransactionController"
+                               testname="02 - Connect Player 1 (SignalR)"
+                               enabled="true">
+          <boolProp name="TransactionController.includeTimers">false</boolProp>
+          <boolProp name="TransactionController.parent">false</boolProp>
+        </TransactionController>
+        <hashTree>
+
+          <!-- POST /game/live/negotiate  — obtain connection token for Player 1 -->
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui"
+                            testclass="HTTPSamplerProxy"
+                            testname="Negotiate P1"
+                            enabled="true">
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+              <collectionProp name="Arguments.arguments"/>
+            </elementProp>
+            <stringProp name="HTTPSampler.path">/game/live/negotiate?negotiateVersion=1</stringProp>
+            <stringProp name="HTTPSampler.method">POST</stringProp>
+            <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+            <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+            <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          </HTTPSamplerProxy>
+          <hashTree>
+            <JSONPathExtractor guiclass="JSONPathExtractorGui"
+                               testclass="JSONPathExtractor"
+                               testname="Extract connectionToken1"
+                               enabled="true">
+              <stringProp name="JSONPathExtractor.referenceName">connectionToken1</stringProp>
+              <stringProp name="JSONPathExtractor.jsonPathExpr">$.connectionToken</stringProp>
+              <stringProp name="JSONPathExtractor.defaultValue">ERROR_TOKEN1_NOT_FOUND</stringProp>
+            </JSONPathExtractor>
+          </hashTree>
+
+          <!-- Open WebSocket for Player 1 (named connection "conn-p1") -->
+          <eu.luminis.jmeter.wssampler.OpenWebSocketSampler
+              guiclass="eu.luminis.jmeter.wssampler.OpenWebSocketSamplerUI"
+              testclass="eu.luminis.jmeter.wssampler.OpenWebSocketSampler"
+              testname="WS Open P1"
+              enabled="true">
+            <stringProp name="serverName">${TARGET_HOST}</stringProp>
+            <stringProp name="serverPort">${TARGET_PORT}</stringProp>
+            <boolProp name="TLS">${USE_TLS}</boolProp>
+            <stringProp name="path">/game/live?id=${connectionToken1}</stringProp>
+            <stringProp name="connectionId">conn-p1</stringProp>
+            <intProp name="connectTimeout">10000</intProp>
+            <intProp name="readTimeout">10000</intProp>
+          </eu.luminis.jmeter.wssampler.OpenWebSocketSampler>
+          <hashTree/>
+
+          <!-- SignalR JSON protocol handshake for Player 1.
+               Server must acknowledge with {}<RS> before any hub invocations. -->
+          <eu.luminis.jmeter.wssampler.SingleWriteWebSocketSampler
+              guiclass="eu.luminis.jmeter.wssampler.SingleWriteWebSocketSamplerUI"
+              testclass="eu.luminis.jmeter.wssampler.SingleWriteWebSocketSampler"
+              testname="SignalR Handshake P1"
+              enabled="true">
+            <stringProp name="requestData">{"protocol":"json","version":1}${RS}</stringProp>
+            <boolProp name="isBinaryMessage">false</boolProp>
+            <boolProp name="waitForResponse">true</boolProp>
+            <intProp name="readTimeout">5000</intProp>
+            <stringProp name="connectionId">conn-p1</stringProp>
+          </eu.luminis.jmeter.wssampler.SingleWriteWebSocketSampler>
+          <hashTree/>
+
+          <!-- Hub invocation: JoinGame(gameId, playerId1) — fire and forget -->
+          <eu.luminis.jmeter.wssampler.SingleWriteWebSocketSampler
+              guiclass="eu.luminis.jmeter.wssampler.SingleWriteWebSocketSamplerUI"
+              testclass="eu.luminis.jmeter.wssampler.SingleWriteWebSocketSampler"
+              testname="JoinGame P1"
+              enabled="true">
+            <stringProp name="requestData">{"type":1,"invocationId":"join-p1","target":"JoinGame","arguments":["${gameId}","${playerId1}"]}${RS}</stringProp>
+            <boolProp name="isBinaryMessage">false</boolProp>
+            <boolProp name="waitForResponse">false</boolProp>
+            <stringProp name="connectionId">conn-p1</stringProp>
+          </eu.luminis.jmeter.wssampler.SingleWriteWebSocketSampler>
+          <hashTree/>
+
+        </hashTree>
+        <!-- end Phase 2 -->
+
+        <!-- ============================================================ -->
+        <!-- PHASE 3 — Connect Player 2 via SignalR WebSocket             -->
+        <!-- ============================================================ -->
+        <TransactionController guiclass="TransactionControllerGui"
+                               testclass="TransactionController"
+                               testname="03 - Connect Player 2 (SignalR)"
+                               enabled="true">
+          <boolProp name="TransactionController.includeTimers">false</boolProp>
+          <boolProp name="TransactionController.parent">false</boolProp>
+        </TransactionController>
+        <hashTree>
+
+          <!-- POST /game/live/negotiate  — obtain connection token for Player 2 -->
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui"
+                            testclass="HTTPSamplerProxy"
+                            testname="Negotiate P2"
+                            enabled="true">
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+              <collectionProp name="Arguments.arguments"/>
+            </elementProp>
+            <stringProp name="HTTPSampler.path">/game/live/negotiate?negotiateVersion=1</stringProp>
+            <stringProp name="HTTPSampler.method">POST</stringProp>
+            <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+            <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+            <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          </HTTPSamplerProxy>
+          <hashTree>
+            <JSONPathExtractor guiclass="JSONPathExtractorGui"
+                               testclass="JSONPathExtractor"
+                               testname="Extract connectionToken2"
+                               enabled="true">
+              <stringProp name="JSONPathExtractor.referenceName">connectionToken2</stringProp>
+              <stringProp name="JSONPathExtractor.jsonPathExpr">$.connectionToken</stringProp>
+              <stringProp name="JSONPathExtractor.defaultValue">ERROR_TOKEN2_NOT_FOUND</stringProp>
+            </JSONPathExtractor>
+          </hashTree>
+
+          <!-- Open WebSocket for Player 2 (named connection "conn-p2") -->
+          <eu.luminis.jmeter.wssampler.OpenWebSocketSampler
+              guiclass="eu.luminis.jmeter.wssampler.OpenWebSocketSamplerUI"
+              testclass="eu.luminis.jmeter.wssampler.OpenWebSocketSampler"
+              testname="WS Open P2"
+              enabled="true">
+            <stringProp name="serverName">${TARGET_HOST}</stringProp>
+            <stringProp name="serverPort">${TARGET_PORT}</stringProp>
+            <boolProp name="TLS">${USE_TLS}</boolProp>
+            <stringProp name="path">/game/live?id=${connectionToken2}</stringProp>
+            <stringProp name="connectionId">conn-p2</stringProp>
+            <intProp name="connectTimeout">10000</intProp>
+            <intProp name="readTimeout">10000</intProp>
+          </eu.luminis.jmeter.wssampler.OpenWebSocketSampler>
+          <hashTree/>
+
+          <!-- SignalR handshake for Player 2 -->
+          <eu.luminis.jmeter.wssampler.SingleWriteWebSocketSampler
+              guiclass="eu.luminis.jmeter.wssampler.SingleWriteWebSocketSamplerUI"
+              testclass="eu.luminis.jmeter.wssampler.SingleWriteWebSocketSampler"
+              testname="SignalR Handshake P2"
+              enabled="true">
+            <stringProp name="requestData">{"protocol":"json","version":1}${RS}</stringProp>
+            <boolProp name="isBinaryMessage">false</boolProp>
+            <boolProp name="waitForResponse">true</boolProp>
+            <intProp name="readTimeout">5000</intProp>
+            <stringProp name="connectionId">conn-p2</stringProp>
+          </eu.luminis.jmeter.wssampler.SingleWriteWebSocketSampler>
+          <hashTree/>
+
+          <!-- Hub invocation: JoinGame(gameId, playerId2) -->
+          <eu.luminis.jmeter.wssampler.SingleWriteWebSocketSampler
+              guiclass="eu.luminis.jmeter.wssampler.SingleWriteWebSocketSamplerUI"
+              testclass="eu.luminis.jmeter.wssampler.SingleWriteWebSocketSampler"
+              testname="JoinGame P2"
+              enabled="true">
+            <stringProp name="requestData">{"type":1,"invocationId":"join-p2","target":"JoinGame","arguments":["${gameId}","${playerId2}"]}${RS}</stringProp>
+            <boolProp name="isBinaryMessage">false</boolProp>
+            <boolProp name="waitForResponse">false</boolProp>
+            <stringProp name="connectionId">conn-p2</stringProp>
+          </eu.luminis.jmeter.wssampler.SingleWriteWebSocketSampler>
+          <hashTree/>
+
+        </hashTree>
+        <!-- end Phase 3 -->
+
+        <!-- ============================================================ -->
+        <!-- PHASE 4 — Move Loop                                          -->
+        <!--   MOVE_ITERATIONS × (P1 move + 1s + P2 move + 1s) = ~200s  -->
+        <!--   Both players alternate; each sends ~1 move per second.     -->
+        <!-- ============================================================ -->
+        <LoopController guiclass="LoopControlPanel"
+                        testclass="LoopController"
+                        testname="04 - Move Loop (100 × 2s = ~200s)"
+                        enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">${MOVE_ITERATIONS}</stringProp>
+        </LoopController>
+        <hashTree>
+
+          <!-- Player 1 sends a move (fire and forget — no response read) -->
+          <eu.luminis.jmeter.wssampler.SingleWriteWebSocketSampler
+              guiclass="eu.luminis.jmeter.wssampler.SingleWriteWebSocketSamplerUI"
+              testclass="eu.luminis.jmeter.wssampler.SingleWriteWebSocketSampler"
+              testname="P1 SendMove"
+              enabled="true">
+            <stringProp name="requestData">{"type":1,"target":"SendMove","arguments":["${gameId}",${BOARD_SNAPSHOT}]}${RS}</stringProp>
+            <boolProp name="isBinaryMessage">false</boolProp>
+            <boolProp name="waitForResponse">false</boolProp>
+            <stringProp name="connectionId">conn-p1</stringProp>
+          </eu.luminis.jmeter.wssampler.SingleWriteWebSocketSampler>
+          <hashTree>
+            <!-- 1-second think time between P1 move and P2 move -->
+            <ConstantTimer guiclass="ConstantTimerGui"
+                           testclass="ConstantTimer"
+                           testname="1s think time (after P1 move)"
+                           enabled="true">
+              <stringProp name="ConstantTimer.delay">1000</stringProp>
+            </ConstantTimer>
+          </hashTree>
+
+          <!-- Player 2 sends a move -->
+          <eu.luminis.jmeter.wssampler.SingleWriteWebSocketSampler
+              guiclass="eu.luminis.jmeter.wssampler.SingleWriteWebSocketSamplerUI"
+              testclass="eu.luminis.jmeter.wssampler.SingleWriteWebSocketSampler"
+              testname="P2 SendMove"
+              enabled="true">
+            <stringProp name="requestData">{"type":1,"target":"SendMove","arguments":["${gameId}",${BOARD_SNAPSHOT}]}${RS}</stringProp>
+            <boolProp name="isBinaryMessage">false</boolProp>
+            <boolProp name="waitForResponse">false</boolProp>
+            <stringProp name="connectionId">conn-p2</stringProp>
+          </eu.luminis.jmeter.wssampler.SingleWriteWebSocketSampler>
+          <hashTree>
+            <!-- 1-second think time between P2 move and next P1 move -->
+            <ConstantTimer guiclass="ConstantTimerGui"
+                           testclass="ConstantTimer"
+                           testname="1s think time (after P2 move)"
+                           enabled="true">
+              <stringProp name="ConstantTimer.delay">1000</stringProp>
+            </ConstantTimer>
+          </hashTree>
+
+        </hashTree>
+        <!-- end Phase 4 -->
+
+        <!-- ============================================================ -->
+        <!-- PHASE 5 — Cleanup: leave games and close WebSocket connections -->
+        <!-- ============================================================ -->
+        <TransactionController guiclass="TransactionControllerGui"
+                               testclass="TransactionController"
+                               testname="05 - Cleanup"
+                               enabled="true">
+          <boolProp name="TransactionController.includeTimers">false</boolProp>
+          <boolProp name="TransactionController.parent">false</boolProp>
+        </TransactionController>
+        <hashTree>
+
+          <!-- LeaveGame P1 -->
+          <eu.luminis.jmeter.wssampler.SingleWriteWebSocketSampler
+              guiclass="eu.luminis.jmeter.wssampler.SingleWriteWebSocketSamplerUI"
+              testclass="eu.luminis.jmeter.wssampler.SingleWriteWebSocketSampler"
+              testname="LeaveGame P1"
+              enabled="true">
+            <stringProp name="requestData">{"type":1,"invocationId":"leave-p1","target":"LeaveGame","arguments":["${gameId}","${playerId1}"]}${RS}</stringProp>
+            <boolProp name="isBinaryMessage">false</boolProp>
+            <boolProp name="waitForResponse">false</boolProp>
+            <stringProp name="connectionId">conn-p1</stringProp>
+          </eu.luminis.jmeter.wssampler.SingleWriteWebSocketSampler>
+          <hashTree/>
+
+          <!-- Close WebSocket P1 -->
+          <eu.luminis.jmeter.wssampler.CloseWebSocketSampler
+              guiclass="eu.luminis.jmeter.wssampler.CloseWebSocketSamplerUI"
+              testclass="eu.luminis.jmeter.wssampler.CloseWebSocketSampler"
+              testname="WS Close P1"
+              enabled="true">
+            <stringProp name="connectionId">conn-p1</stringProp>
+          </eu.luminis.jmeter.wssampler.CloseWebSocketSampler>
+          <hashTree/>
+
+          <!-- LeaveGame P2 -->
+          <eu.luminis.jmeter.wssampler.SingleWriteWebSocketSampler
+              guiclass="eu.luminis.jmeter.wssampler.SingleWriteWebSocketSamplerUI"
+              testclass="eu.luminis.jmeter.wssampler.SingleWriteWebSocketSampler"
+              testname="LeaveGame P2"
+              enabled="true">
+            <stringProp name="requestData">{"type":1,"invocationId":"leave-p2","target":"LeaveGame","arguments":["${gameId}","${playerId2}"]}${RS}</stringProp>
+            <boolProp name="isBinaryMessage">false</boolProp>
+            <boolProp name="waitForResponse">false</boolProp>
+            <stringProp name="connectionId">conn-p2</stringProp>
+          </eu.luminis.jmeter.wssampler.SingleWriteWebSocketSampler>
+          <hashTree/>
+
+          <!-- Close WebSocket P2 -->
+          <eu.luminis.jmeter.wssampler.CloseWebSocketSampler
+              guiclass="eu.luminis.jmeter.wssampler.CloseWebSocketSamplerUI"
+              testclass="eu.luminis.jmeter.wssampler.CloseWebSocketSampler"
+              testname="WS Close P2"
+              enabled="true">
+            <stringProp name="connectionId">conn-p2</stringProp>
+          </eu.luminis.jmeter.wssampler.CloseWebSocketSampler>
+          <hashTree/>
+
+        </hashTree>
+        <!-- end Phase 5 -->
+
+        <!-- ============================================================ -->
+        <!-- LISTENER — Summary Report                                     -->
+        <!-- Disabled by default: Azure Load Testing collects its own      -->
+        <!-- metrics. Enable locally by setting enabled="true".            -->
+        <!-- ============================================================ -->
+        <ResultCollector guiclass="SummaryReport"
+                         testclass="ResultCollector"
+                         testname="Summary Report (local only)"
+                         enabled="false">
+          <boolProp name="ResultCollector.error_logging">false</boolProp>
+          <objProp>
+            <name>saveConfig</name>
+            <value class="SampleSaveConfiguration">
+              <time>true</time>
+              <latency>true</latency>
+              <timestamp>true</timestamp>
+              <success>true</success>
+              <label>true</label>
+              <code>true</code>
+              <message>true</message>
+              <threadName>true</threadName>
+              <dataType>true</dataType>
+              <encoding>false</encoding>
+              <assertions>true</assertions>
+              <subresults>true</subresults>
+              <responseData>false</responseData>
+              <samplerData>false</samplerData>
+              <xml>false</xml>
+              <fieldNames>true</fieldNames>
+              <responseHeaders>false</responseHeaders>
+              <requestHeaders>false</requestHeaders>
+              <responseDataOnError>false</responseDataOnError>
+              <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
+              <assertionsResultsToSave>0</assertionsResultsToSave>
+              <bytes>true</bytes>
+              <sentBytes>true</sentBytes>
+              <url>true</url>
+              <threadCounts>true</threadCounts>
+              <idleTime>true</idleTime>
+              <connectTime>true</connectTime>
+            </value>
+          </objProp>
+          <stringProp name="filename">results.jtl</stringProp>
+        </ResultCollector>
+        <hashTree/>
+
+      </hashTree>
+      <!-- end thread group hashTree -->
+
+    </hashTree>
+    <!-- end TestPlan hashTree -->
+
+  </hashTree>
+</jmeterTestPlan>
