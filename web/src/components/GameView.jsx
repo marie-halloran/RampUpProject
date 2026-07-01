@@ -1,31 +1,19 @@
-import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import ChessBoard from './ChessBoard';
-import { createInitialBoard, toBoardSnapshot } from '../game/chessSetup';
-import { useGameHub } from '../hooks/useGameHub';
+import { toBoardSnapshot } from '../game/chessSetup';
+import { useGame } from '../context/GameConnectionContext';
+import { useGameActions } from '../hooks/useGameActions';
 
 /**
  * Active game screen: shows the live board, player presence and move status.
  */
 export default function GameView() {
-  const { gameId: urlGameId } = useParams();
   const navigate = useNavigate();
-  const { ready, gameId, sendMove, setHandlers } = useGameHub(urlGameId);
-  const [board, setBoard] = useState(() => createInitialBoard());
-  const [opponent, setOpponent] = useState(null);
+  const { gameId, board, setBoard, ready, opponent } = useGame();
+  const { sendMove } = useGameActions();
   const [lastMove, setLastMove] = useState(null);
   const [syncState, setSyncState] = useState('idle'); // idle | sending | error
-
-  // Route live updates for this game (opponent presence + moves) into local state.
-  useEffect(() => {
-    setHandlers({
-      onOpponentJoined: (player) => setOpponent(player),
-      onOpponentMove: (snapshot) => {
-        if (snapshot?.squares) setBoard(snapshot.squares);
-      },
-    });
-    return () => setHandlers({});
-  }, [setHandlers]);
 
   async function handleMove(nextBoard, move) {
     setBoard(nextBoard);
