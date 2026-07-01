@@ -79,7 +79,7 @@ app.UseAuthorization();
 
 app.MapGet("/healthz", () => Results.Ok());
 app.MapStaticAssets();
-app.MapHub<GameHub>("/game");
+app.MapHub<LiveGameHub>("/game/live");
 app.MapControllers();
 
 

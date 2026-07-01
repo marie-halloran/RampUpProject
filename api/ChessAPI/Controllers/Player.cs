@@ -19,6 +19,14 @@ public class PlayerController : ControllerBase
         await grain.Create(request.PlayerName, request.Color, playerId);
         return Ok(new { playerId });
     }
+
+    [HttpGet("{playerId}")]
+    public async Task<IActionResult> GetPlayer(string playerId)
+    {
+        var grain = _grainFactory.GetGrain<IPlayerGrain>(playerId);
+        var playerState = await grain.GetPlayer();
+        return Ok(playerState);
+    }
 }
 
 public record CreatePlayerRequest(string PlayerName, string Color);

@@ -37,9 +37,18 @@ public class GameGrain : Grain, IGameGrain
         await _state.WriteStateAsync();
     }
 
+    public async Task RemovePlayer(string playerId)
+    {
+        if (_state.State.Status != "active")
+            throw new InvalidOperationException("game is not active");
+        _state.State.Players.Remove(playerId);
+        await _state.WriteStateAsync();
+    }
+
     public async Task<List<string>> GetPlayers()
     {
         return _state.State.Players;
+        
     }
 
     public async Task Close()
