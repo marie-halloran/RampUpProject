@@ -45,21 +45,22 @@ export function useGameActions() {
   const joinGame = useCallback(
     async (joinId) => {
       if (!connection || !ready) return;
-      const raw = await connection.invoke('JoinGame', joinId);
-      const squares = fromBoardSnapshot(raw);
+      const { board, opponentName } = await connection.invoke('JoinGame', joinId, playerName);
+      const squares = fromBoardSnapshot(board);
       if (squares) setBoard(squares);
+      if (opponentName) setOpponent({ name: opponentName });
       setGameId(joinId);
     },
-    [connection, ready, setBoard, setGameId],
+    [connection, ready, playerName, setBoard, setGameId, setOpponent],
   );
 
   const createGame = useCallback(
     async () => {
       if (!connection || !ready) return;
-      const newId = await connection.invoke('CreateGame');
+      const newId = await connection.invoke('CreateGame', playerName);
       setGameId(newId);
     },
-    [connection, ready, setGameId],
+    [connection, ready, setGameId, playerName],
   );
 
   const sendMove = useCallback(

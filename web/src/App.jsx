@@ -6,14 +6,16 @@ import './App.css';
 
 function App() {
   return (
-    <main className="app">
-      <Routes>
-        <Route path="/" element={<Lobby />} />
-        <Route path="/game" element={<GameProvider><GameView /></GameProvider>} />
-        <Route path="/game/:gameId" element={<GameProvider><GameView /></GameProvider>} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </main>
+    <GameProvider>
+      <main className="app">
+        <Routes>
+          <Route path="/" element={<Lobby />} />
+          <Route path="/game" element={<GameView />} />
+          <Route path="/game/:gameId" element={<GameView />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </main>
+    </GameProvider>
   );
 }
 

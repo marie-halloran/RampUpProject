@@ -1,10 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useGame } from '../context/GameConnectionContext';
 
 export default function Lobby() {
   const navigate = useNavigate();
+  const { playerName, setPlayerName } = useGame();
   const [joinCode, setJoinCode] = useState('');
   const [error, setError] = useState('');
+
+  const hasName = playerName.trim() !== '';
 
   function handleCreate() {
     navigate('/game');
@@ -21,6 +25,18 @@ export default function Lobby() {
       <h1>♟ Chess</h1>
       <p className="muted">Create a new game or join one with a code.</p>
 
+      <section className="lobby-card">
+        <h2>Your name</h2>
+        <input
+          type="text"
+          value={playerName}
+          onChange={(e) => setPlayerName(e.target.value)}
+          placeholder="Enter your name"
+          aria-label="Player name"
+          maxLength={30}
+        />
+      </section>
+
       <div className="lobby-cards">
         <section className="lobby-card">
           <h2>Create game</h2>
@@ -29,6 +45,7 @@ export default function Lobby() {
             type="button"
             className="primary-btn"
             onClick={handleCreate}
+            disabled={!hasName}
           >
             Create game
           </button>
@@ -48,9 +65,9 @@ export default function Lobby() {
             <button
               type="submit"
               className="primary-btn"
-              disabled={joinCode.trim() === ''}
+              disabled={!hasName || joinCode.trim() === ''}
             >
-              {'Join game'}
+              Join game
             </button>
           </form>
         </section>

@@ -8,8 +8,9 @@ export function GameProvider({ children }) {
   const [board, setBoard] = useState(() => createInitialBoard());
   const [ready, setReady] = useState(false);
   const [opponent, setOpponent] = useState(null);
+  const [playerName, setPlayerName] = useState('');
   return (
-    <GameContext.Provider value={{ gameId, setGameId, board, setBoard, ready, setReady, opponent, setOpponent }}>
+    <GameContext.Provider value={{ gameId, setGameId, board, setBoard, ready, setReady, opponent, setOpponent, playerName, setPlayerName }}>
       {children}
     </GameContext.Provider>
   );
