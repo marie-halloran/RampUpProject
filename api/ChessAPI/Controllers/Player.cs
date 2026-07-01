@@ -17,6 +17,7 @@ public class PlayerController : ControllerBase
         string playerId = Guid.NewGuid().ToString();
         var grain = _grainFactory.GetGrain<IPlayerGrain>(playerId);
         await grain.Create(request.PlayerName, request.Color, playerId);
+        await grain.GoOnline();
         return Ok(new { playerId });
     }
 
@@ -24,7 +25,7 @@ public class PlayerController : ControllerBase
     public async Task<IActionResult> GetPlayer(string playerId)
     {
         var grain = _grainFactory.GetGrain<IPlayerGrain>(playerId);
-        var playerState = await grain.GetPlayer();
+        PlayerState playerState = await grain.GetPlayer();
         return Ok(playerState);
     }
 }

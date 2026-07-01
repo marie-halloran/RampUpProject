@@ -26,20 +26,26 @@ namespace ChessAPI.Hubs
             var playerGrain = _grainFactory.GetGrain<IPlayerGrain>(playerId);
             string? currentBoard = await gameGrain.GetBoard();
             string? opponentId = (await gameGrain.GetPlayers()).FirstOrDefault(id => id != playerId);
-            await playerGrain.GoOnline();
-            await gameGrain.AddPlayer(playerId);
-            await Groups.AddToGroupAsync(Context.ConnectionId, gameId);
+            await Task.WhenAll(
+                playerGrain.GoOnline(),
+                gameGrain.AddPlayer(playerId),
+                gameGrain.UpdateStatus("active"),
+                Groups.AddToGroupAsync(Context.ConnectionId, gameId)
+            );
             await Clients.OthersInGroup(gameId).SendAsync("OpponentJoined", playerId);
-            return new { board = currentBoard, opponent = opponentId  };
+            return new { board = currentBoard, opponent = opponentId };
         }
 
         public async Task LeaveGame(string gameId, string playerId)
         {
             var gameGrain = _grainFactory.GetGrain<IGameGrain>(gameId);
             var playerGrain = _grainFactory.GetGrain<IPlayerGrain>(playerId);
-            await gameGrain.RemovePlayer(playerId);
-            await playerGrain.GoOffline();
-            await Groups.RemoveFromGroupAsync(Context.ConnectionId, gameId);
+            await Task.WhenAll(
+                gameGrain.RemovePlayer(playerId),
+                playerGrain.GoOffline(),
+                gameGrain.UpdateStatus("ended"),
+                Groups.RemoveFromGroupAsync(Context.ConnectionId, gameId)
+            );
             await Clients.OthersInGroup(gameId).SendAsync("PlayerLeft", playerId);
         }
     }

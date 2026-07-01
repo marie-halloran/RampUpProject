@@ -13,17 +13,14 @@ public class GameController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateGame([FromBody] CreateGameRequest request)
     {
-        string playerId = Guid.NewGuid().ToString();
-        var playerGrain = _grainFactory.GetGrain<IPlayerGrain>(playerId);
-        await playerGrain.Create(request.PlayerName, "white", playerId);
-
         string gameId = Guid.NewGuid().ToString();
         var gameGrain = _grainFactory.GetGrain<IGameGrain>(gameId);
         await gameGrain.Create();
-        await gameGrain.AddPlayer(playerId);
+        await gameGrain.UpdateStatus("pending");
+        await gameGrain.AddPlayer(request.PlayerId);
 
-        return Ok(new { gameId, playerId });
+        return Ok(new { gameId });
     }
 }
 
-public record CreateGameRequest(string PlayerName);
+public record CreateGameRequest(string PlayerId);

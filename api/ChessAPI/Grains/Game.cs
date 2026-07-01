@@ -16,6 +16,17 @@ public class GameGrain : Grain, IGameGrain
         await _state.WriteStateAsync();
     }
 
+    public async Task UpdateStatus(string status)
+    {
+        _state.State.Status = status;
+        await _state.WriteStateAsync();
+    }
+
+    public async Task<string?> GetStatus()
+    {
+        return _state.State.Status;
+    }
+
     public async Task<string?> GetBoard()
     {
         return _state.State.Board;
