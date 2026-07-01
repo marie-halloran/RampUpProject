@@ -29,17 +29,17 @@ public class GameGrain : Grain, IGameGrain
         await _state.WriteStateAsync();
     }
 
-    public async Task AddPlayer(string playerName, string color)
+    public async Task AddPlayer(string playerId)
     {
         if (_state.State.Status != "active")
             throw new InvalidOperationException("game is not active");
-        _state.State.Players.Add(new Player { Name = playerName, Color = color });
+        _state.State.Players.Add(playerId);
         await _state.WriteStateAsync();
     }
 
-    public async Task<string?> GetPlayers()
+    public async Task<List<string>> GetPlayers()
     {
-        return JsonSerializer.Serialize(_state.State.Players);
+        return _state.State.Players;
     }
 
     public async Task Close()

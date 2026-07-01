@@ -12,30 +12,46 @@ namespace ChessAPI.Hubs
             _grainFactory = grainFactory;
         }
 
+        public async Task<string> CreatePlayer(string playerName, string color)
+        {
+            string playerId = Guid.NewGuid().ToString();
+            var playerGrain = _grainFactory.GetGrain<IPlayerGrain>(playerId);
+            await playerGrain.Create(playerName, color, playerId);
+            return playerId;
+        }
+
         public async Task SendMove(string gameId, JsonElement snapshot)
         {
-            Console.WriteLine($"move received for game {gameId}");
-            var grain = _grainFactory.GetGrain<IGameGrain>(gameId);
-            await grain.UpdateBoard(snapshot.GetRawText());
+            var gameGrain = _grainFactory.GetGrain<IGameGrain>(gameId);
+            await gameGrain.UpdateBoard(snapshot.GetRawText());
             await Clients.OthersInGroup(gameId).SendAsync("ReceiveMove", snapshot);
         }
 
         public async Task<object> JoinGame(string gameId, string playerName)
         {
-            var grain = _grainFactory.GetGrain<IGameGrain>(gameId);
-            var currentBoard = await grain.GetBoard();
+            var playerId = await CreatePlayer(playerName, "black");
+
+            var gameGrain = _grainFactory.GetGrain<IGameGrain>(gameId);
+            var currentBoard = await gameGrain.GetBoard();
+            await gameGrain.AddPlayer(playerId);
+            var players = await gameGrain.GetPlayers();
+
             await Groups.AddToGroupAsync(Context.ConnectionId, gameId);
-            await grain.AddPlayer(playerName, "black");
-            var players = await grain.GetPlayers();
             await Clients.OthersInGroup(gameId).SendAsync("OpponentJoined", new { name = playerName });
             return new { board = currentBoard, players };
         }
         public async Task<string> CreateGame(string playerName)
         {
+
+            //TODO move this code to a separate endpoint
+            string playerId = await CreatePlayer(playerName, "white");
+
             string gameId = Guid.NewGuid().ToString();
-            IGameGrain grain = _grainFactory.GetGrain<IGameGrain>(gameId);
-            await grain.Create();
-            await grain.AddPlayer(playerName, "white"); // Assuming the creating player is white for now
+            IGameGrain gameGrain = _grainFactory.GetGrain<IGameGrain>(gameId);
+            await gameGrain.Create();
+            await gameGrain.AddPlayer(playerId);
+
+
             await Groups.AddToGroupAsync(Context.ConnectionId, gameId);
             //Create a game grain in orleans and store the gameId there so that it can be tracked
             return gameId;
@@ -43,8 +59,8 @@ namespace ChessAPI.Hubs
 
         public async Task CloseGame(string gameId)
         {
-            IGameGrain grain = _grainFactory.GetGrain<IGameGrain>(gameId);
-            await grain.Close();
+            IGameGrain gameGrain = _grainFactory.GetGrain<IGameGrain>(gameId);
+            await gameGrain.Close();
             await Clients.OthersInGroup(gameId).SendAsync("GameClosed", gameId);
             //Instead of just sending moves back to client right away, will send to orleans
         }

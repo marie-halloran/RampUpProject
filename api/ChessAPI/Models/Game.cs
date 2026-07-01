@@ -14,5 +14,5 @@ public class GameState
     public string Board { get; set; } = string.Empty;
 
     [Id(3)]
-    public List<Player> Players { get; set; } = new List<Player>();
+    public List<string> Players { get; set; } = new List<string>(); //playerIds of players in the game
 }
