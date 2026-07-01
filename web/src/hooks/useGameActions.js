@@ -11,7 +11,7 @@ import { fromBoardSnapshot } from '../game/chessSetup';
  * in GameContext directly.
  */
 export function useGameActions() {
-  const { setGameId, setBoard, setReady, setOpponent, gameId, ready } = useGame();
+  const { setGameId, setBoard, setReady, setOpponent, gameId, ready, playerName } = useGame();
   const [connection, setConnection] = useState(null);
 
   useEffect(() => {
@@ -45,10 +45,14 @@ export function useGameActions() {
   const joinGame = useCallback(
     async (joinId) => {
       if (!connection || !ready) return;
-      const { board, opponentName } = await connection.invoke('JoinGame', joinId, playerName);
+      const { board, players } = await connection.invoke('JoinGame', joinId, playerName);
       const squares = fromBoardSnapshot(board);
       if (squares) setBoard(squares);
-      if (opponentName) setOpponent({ name: opponentName });
+      // players is "Creator,Joiner" — opponent is the creator (first entry)
+      if (players) {
+        const [creatorName] = players.split(',');
+        if (creatorName) setOpponent({ name: creatorName });
+      }
       setGameId(joinId);
     },
     [connection, ready, playerName, setBoard, setGameId, setOpponent],

@@ -1,5 +1,6 @@
 namespace ChessAPI.Models;
 
+
 [GenerateSerializer]
 public class GameState
 {
@@ -11,4 +12,7 @@ public class GameState
 
     [Id(2)]
     public string Board { get; set; } = string.Empty;
+
+    [Id(3)]
+    public List<Player> Players { get; set; } = new List<Player>();
 }

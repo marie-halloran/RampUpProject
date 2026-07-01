@@ -1,3 +1,4 @@
+using System.Text.Json;
 using ChessAPI.Models;
 
 public class GameGrain : Grain, IGameGrain
@@ -12,7 +13,7 @@ public class GameGrain : Grain, IGameGrain
         if (_state.State.Status == "active") return;
         _state.State.GameId = this.GetPrimaryKeyString();
         _state.State.Status = "active";
-        await _state.WriteStateAsync();            // persist to Cosmos
+        await _state.WriteStateAsync();
     }
 
     public async Task<string?> GetBoard()
@@ -20,12 +21,25 @@ public class GameGrain : Grain, IGameGrain
         return _state.State.Board;
     }
 
-    public async Task Update(string board)
+    public async Task UpdateBoard(string board)
     {
         if (_state.State.Status != "active")
             throw new InvalidOperationException("game is not active");
         _state.State.Board = board;
         await _state.WriteStateAsync();
+    }
+
+    public async Task AddPlayer(string playerName, string color)
+    {
+        if (_state.State.Status != "active")
+            throw new InvalidOperationException("game is not active");
+        _state.State.Players.Add(new Player { Name = playerName, Color = color });
+        await _state.WriteStateAsync();
+    }
+
+    public async Task<string?> GetPlayers()
+    {
+        return JsonSerializer.Serialize(_state.State.Players);
     }
 
     public async Task Close()

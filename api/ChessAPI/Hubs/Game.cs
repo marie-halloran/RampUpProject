@@ -16,24 +16,26 @@ namespace ChessAPI.Hubs
         {
             Console.WriteLine($"move received for game {gameId}");
             var grain = _grainFactory.GetGrain<IGameGrain>(gameId);
-            await grain.Update(snapshot.GetRawText());
+            await grain.UpdateBoard(snapshot.GetRawText());
             await Clients.OthersInGroup(gameId).SendAsync("ReceiveMove", snapshot);
         }
 
-        public async Task<string?> JoinGame(string gameId)
+        public async Task<object> JoinGame(string gameId, string playerName)
         {
-            //Just a listener right now
             var grain = _grainFactory.GetGrain<IGameGrain>(gameId);
             var currentBoard = await grain.GetBoard();
             await Groups.AddToGroupAsync(Context.ConnectionId, gameId);
-            await Clients.OthersInGroup(gameId).SendAsync("OpponentJoined", new { name = "Opponent" }); // notify the creator
-            return currentBoard;
+            await grain.AddPlayer(playerName, "black");
+            var players = await grain.GetPlayers();
+            await Clients.OthersInGroup(gameId).SendAsync("OpponentJoined", new { name = playerName });
+            return new { board = currentBoard, players };
         }
-        public async Task<string> CreateGame()
+        public async Task<string> CreateGame(string playerName)
         {
             string gameId = Guid.NewGuid().ToString();
             IGameGrain grain = _grainFactory.GetGrain<IGameGrain>(gameId);
             await grain.Create();
+            await grain.AddPlayer(playerName, "white"); // Assuming the creating player is white for now
             await Groups.AddToGroupAsync(Context.ConnectionId, gameId);
             //Create a game grain in orleans and store the gameId there so that it can be tracked
             return gameId;

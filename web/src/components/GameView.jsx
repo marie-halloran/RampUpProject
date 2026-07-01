@@ -11,7 +11,7 @@ import { useGameActions } from '../hooks/useGameActions';
 export default function GameView() {
   const navigate = useNavigate();
   const { gameId: urlGameId } = useParams();
-  const { gameId, setGameId, board, setBoard, ready, opponent } = useGame();
+  const { gameId, setGameId, board, setBoard, ready, opponent, playerName } = useGame();
   const { sendMove, joinGame, createGame } = useGameActions();
   const [lastMove, setLastMove] = useState(null);
   const [syncState, setSyncState] = useState('idle'); // idle | sending | error
@@ -59,7 +59,7 @@ export default function GameView() {
             <h3>Players</h3>
             <ul className="player-list">
               <li>
-                <span className="dot you" /> You
+                <span className="dot you" /> {playerName || 'You'}
               </li>
               <li>
                 <span className={`dot ${opponent ? 'live' : 'waiting'}`} />
