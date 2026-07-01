@@ -15,6 +15,11 @@ public class GameGrain : Grain, IGameGrain
         await _state.WriteStateAsync();            // persist to Cosmos
     }
 
+    public async Task<string?> GetBoard()
+    {
+        return _state.State.Board;
+    }
+
     public async Task Update(string board)
     {
         if (_state.State.Status != "active")

@@ -20,11 +20,13 @@ namespace ChessAPI.Hubs
             await Clients.OthersInGroup(gameId).SendAsync("ReceiveMove", snapshot);
         }
 
-        public async Task JoinGame(string gameId)
+        public async Task<string?> JoinGame(string gameId)
         {
             //Just a listener right now
+            var grain = _grainFactory.GetGrain<IGameGrain>(gameId);
+            var currentBoard = await grain.GetBoard();
             await Groups.AddToGroupAsync(Context.ConnectionId, gameId);
-            Console.WriteLine($"game joined: {gameId}");
+            return currentBoard;
         }
         public async Task<string> CreateGame()
         {
