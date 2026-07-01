@@ -10,9 +10,7 @@ public class GameGrain : Grain, IGameGrain
 
     public async Task Create()
     {
-        if (_state.State.Status == "active") return;
         _state.State.GameId = this.GetPrimaryKeyString();
-        _state.State.Status = "active";
         await _state.WriteStateAsync();
     }
 
@@ -34,24 +32,18 @@ public class GameGrain : Grain, IGameGrain
 
     public async Task UpdateBoard(string board)
     {
-        if (_state.State.Status != "active")
-            throw new InvalidOperationException("game is not active");
         _state.State.Board = board;
         await _state.WriteStateAsync();
     }
 
     public async Task AddPlayer(string playerId)
     {
-        if (_state.State.Status != "active")
-            throw new InvalidOperationException("game is not active");
         _state.State.Players.Add(playerId);
         await _state.WriteStateAsync();
     }
 
     public async Task RemovePlayer(string playerId)
     {
-        if (_state.State.Status != "active")
-            throw new InvalidOperationException("game is not active");
         _state.State.Players.Remove(playerId);
         await _state.WriteStateAsync();
     }

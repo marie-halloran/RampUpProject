@@ -44,7 +44,8 @@ export function useGameActions() {
       })
       .catch(console.error);
 
-    return () => {
+    return async () => {
+      await connection.invoke('LeaveGame', gid, pid);
       setReady(false);
       setOpponent(null);
       setConnection(null);
