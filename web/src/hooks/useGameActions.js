@@ -4,7 +4,7 @@ import { useGame } from '../context/GameConnectionContext';
 import { fromBoardSnapshot } from '../game/chessSetup';
 
 export function useGameActions() {
-  const { setGameId, setBoard, setReady, setOpponent, gameId, ready, playerName, playerId, setPlayerId } = useGame();
+  const { setGameId, setBoard, setReady, setOpponent, setGameStatus, gameId, ready, playerName, playerId, setPlayerId } = useGame();
   const [connection, setConnection] = useState(null);
 
   // Ensure a player grain exists for this session; creates one if needed.
@@ -34,6 +34,7 @@ export function useGameActions() {
 
     conn.on('PlayerLeft', () => {
       setOpponent(null);
+      setGameStatus('ended');
     });
 
     conn
@@ -48,6 +49,7 @@ export function useGameActions() {
       await connection.invoke('LeaveGame', gid, pid);
       setReady(false);
       setOpponent(null);
+      setGameStatus('ended');
       setConnection(null);
       conn.stop();
     };
@@ -88,7 +90,8 @@ export function useGameActions() {
   const leaveGame = useCallback(async () => {
     if (!connection || !gameId || !playerId) return;
     await connection.invoke('LeaveGame', gameId, playerId);
-  }, [connection, gameId, playerId]);
+    setGameStatus('ended');
+  }, [connection, gameId, playerId, setGameStatus]);
 
   const sendMove = useCallback((snapshot) => {
     if (!connection || !ready || !gameId) return Promise.resolve();

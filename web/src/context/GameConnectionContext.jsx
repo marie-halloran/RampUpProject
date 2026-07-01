@@ -10,8 +10,9 @@ export function GameProvider({ children }) {
   const [opponent, setOpponent] = useState(null);
   const [playerName, setPlayerName] = useState('');
   const [playerId, setPlayerId] = useState(null);
+  const [gameStatus, setGameStatus] = useState('pending'); // pending | active | finished
   return (
-    <GameContext.Provider value={{ gameId, setGameId, board, setBoard, ready, setReady, opponent, setOpponent, playerName, setPlayerName, playerId, setPlayerId }}>
+    <GameContext.Provider value={{ gameId, setGameId, board, setBoard, ready, setReady, opponent, setOpponent, playerName, setPlayerName, playerId, setPlayerId, gameStatus, setGameStatus }}>
       {children}
     </GameContext.Provider>
   );

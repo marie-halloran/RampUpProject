@@ -1,6 +1,6 @@
 public interface IGameGrain : IGrainWithStringKey   // key = gameId
 {
-    Task Create();
+    Task Create(string? status, List<string>? players);
 
     Task UpdateStatus(string status);
 

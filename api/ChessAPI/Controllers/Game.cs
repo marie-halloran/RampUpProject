@@ -15,11 +15,7 @@ public class GameController : ControllerBase
     {
         string gameId = Guid.NewGuid().ToString();
         var gameGrain = _grainFactory.GetGrain<IGameGrain>(gameId);
-        await Task.WhenAll(
-            gameGrain.Create(),
-            gameGrain.UpdateStatus("pending"),
-            gameGrain.AddPlayer(request.PlayerId)
-        );
+        await gameGrain.Create(status: "pending", players: new List<string> { request.PlayerId });
         return Ok(new { gameId });
     }
 }

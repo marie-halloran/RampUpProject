@@ -8,9 +8,11 @@ public class GameGrain : Grain, IGameGrain
     public GameGrain([PersistentState("game", "profileStore")] IPersistentState<GameState> state)
         => _state = state;
 
-    public async Task Create()
+    public async Task Create(string? status, List<string>? players)
     {
         _state.State.GameId = this.GetPrimaryKeyString();
+        if (status != null) _state.State.Status = status;
+        _state.State.Players = players ?? new List<string>();
         await _state.WriteStateAsync();
     }
 
