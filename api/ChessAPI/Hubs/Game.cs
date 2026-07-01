@@ -26,6 +26,7 @@ namespace ChessAPI.Hubs
             var grain = _grainFactory.GetGrain<IGameGrain>(gameId);
             var currentBoard = await grain.GetBoard();
             await Groups.AddToGroupAsync(Context.ConnectionId, gameId);
+            await Clients.OthersInGroup(gameId).SendAsync("OpponentJoined", new { name = "Opponent" }); // notify the creator
             return currentBoard;
         }
         public async Task<string> CreateGame()

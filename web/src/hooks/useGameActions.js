@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { buildGameConnection } from '../services/realtime';
 import { useGame } from '../context/GameConnectionContext';
+import { fromBoardSnapshot } from '../game/chessSetup';
 
 /**
  * Connects to the game hub once on mount.
@@ -17,7 +18,8 @@ export function useGameActions() {
     const conn = buildGameConnection();
 
     conn.on('ReceiveMove', (snapshot) => {
-      if (snapshot?.squares) setBoard(snapshot.squares);
+      const squares = fromBoardSnapshot(snapshot);
+      if (squares) setBoard(squares);
     });
 
     conn.on('OpponentJoined', (player) => {
@@ -26,15 +28,7 @@ export function useGameActions() {
 
     conn
       .start()
-      .then(async () => {
-        if (gameId) {
-          const board = await conn.invoke('JoinGame', gameId);
-          setBoard(board.squares);
-          setGameId(gameId);
-        } else {
-          const newId = await conn.invoke('CreateGame');
-          setGameId(newId);
-        }
+      .then(() => {
         setConnection(conn);
         setReady(true);
       })
@@ -48,6 +42,26 @@ export function useGameActions() {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const joinGame = useCallback(
+    async (joinId) => {
+      if (!connection || !ready) return;
+      const raw = await connection.invoke('JoinGame', joinId);
+      const squares = fromBoardSnapshot(raw);
+      if (squares) setBoard(squares);
+      setGameId(joinId);
+    },
+    [connection, ready, setBoard, setGameId],
+  );
+
+  const createGame = useCallback(
+    async () => {
+      if (!connection || !ready) return;
+      const newId = await connection.invoke('CreateGame');
+      setGameId(newId);
+    },
+    [connection, ready, setGameId],
+  );
+
   const sendMove = useCallback(
     (snapshot) => {
       if (!connection || !ready || !gameId) return Promise.resolve();
@@ -56,7 +70,7 @@ export function useGameActions() {
     [connection, ready, gameId],
   );
 
-  return { sendMove };
+  return { sendMove, joinGame, createGame };
 }
 
 

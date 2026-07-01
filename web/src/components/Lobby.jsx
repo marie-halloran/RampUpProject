@@ -13,7 +13,7 @@ export default function Lobby() {
   function handleJoin(event) {
     event.preventDefault();
     const trimmed = joinCode.trim();
-    if (trimmed) navigate('/game', { state: { joinId: trimmed } });
+    if (trimmed) navigate(`/game/${trimmed}`);
   }
 
   return (

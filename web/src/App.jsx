@@ -10,6 +10,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Lobby />} />
         <Route path="/game" element={<GameProvider><GameView /></GameProvider>} />
+        <Route path="/game/:gameId" element={<GameProvider><GameView /></GameProvider>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </main>

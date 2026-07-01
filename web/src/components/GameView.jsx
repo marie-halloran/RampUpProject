@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import ChessBoard from './ChessBoard';
 import { toBoardSnapshot } from '../game/chessSetup';
 import { useGame } from '../context/GameConnectionContext';
@@ -10,10 +10,22 @@ import { useGameActions } from '../hooks/useGameActions';
  */
 export default function GameView() {
   const navigate = useNavigate();
-  const { gameId, board, setBoard, ready, opponent } = useGame();
-  const { sendMove } = useGameActions();
+  const { gameId: urlGameId } = useParams();
+  const { gameId, setGameId, board, setBoard, ready, opponent } = useGame();
+  const { sendMove, joinGame, createGame } = useGameActions();
   const [lastMove, setLastMove] = useState(null);
   const [syncState, setSyncState] = useState('idle'); // idle | sending | error
+
+  useEffect(() => {
+    if (!ready) return;
+    if (urlGameId) {
+      joinGame(urlGameId);
+    } else {
+      createGame();
+    }
+
+  }, [ready, urlGameId]); 
+
 
   async function handleMove(nextBoard, move) {
     setBoard(nextBoard);

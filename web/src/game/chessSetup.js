@@ -60,3 +60,14 @@ export function toBoardSnapshot(board) {
     squares: board,
   };
 }
+
+/**
+ * Parse a board snapshot returned by the backend into the 8x8 matrix.
+ * Accepts either a JSON string (from JoinGame) or an already-parsed object (from ReceiveMove).
+ * Returns null if the snapshot is null/empty (e.g. a brand-new game with no moves yet).
+ */
+export function fromBoardSnapshot(snapshot) {
+  if (!snapshot) return null;
+  const parsed = typeof snapshot === 'string' ? JSON.parse(snapshot) : snapshot;
+  return parsed.squares ?? null;
+}
