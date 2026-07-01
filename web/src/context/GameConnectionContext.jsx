@@ -9,8 +9,9 @@ export function GameProvider({ children }) {
   const [ready, setReady] = useState(false);
   const [opponent, setOpponent] = useState(null);
   const [playerName, setPlayerName] = useState('');
+  const [playerId, setPlayerId] = useState(null);
   return (
-    <GameContext.Provider value={{ gameId, setGameId, board, setBoard, ready, setReady, opponent, setOpponent, playerName, setPlayerName }}>
+    <GameContext.Provider value={{ gameId, setGameId, board, setBoard, ready, setReady, opponent, setOpponent, playerName, setPlayerName, playerId, setPlayerId }}>
       {children}
     </GameContext.Provider>
   );

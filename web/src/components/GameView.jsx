@@ -12,7 +12,7 @@ export default function GameView() {
   const navigate = useNavigate();
   const { gameId: urlGameId } = useParams();
   const { gameId, setGameId, board, setBoard, ready, opponent, playerName } = useGame();
-  const { sendMove, joinGame, createGame } = useGameActions();
+  const { sendMove, joinGame, createGame, leaveGame } = useGameActions();
   const [lastMove, setLastMove] = useState(null);
   const [syncState, setSyncState] = useState('idle'); // idle | sending | error
 
@@ -46,7 +46,7 @@ export default function GameView() {
           <h2>{gameId ? `Game ${gameId}` : 'Creating game…'}</h2>
           <p className="muted">{ready ? 'Connected' : 'Connecting…'}</p>
         </div>
-        <button type="button" className="ghost-btn" onClick={() => navigate('/')}>
+        <button type="button" className="ghost-btn" onClick={async () => { await leaveGame(); navigate('/'); }}>
           Leave game
         </button>
       </header>

@@ -1,18 +1,19 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useLocation } from 'react-router-dom';
-import { buildGameConnection } from '../services/realtime';
+import { buildGameConnection, apiCreatePlayer, apiCreateGame, apiGetPlayer } from '../services/realtime';
 import { useGame } from '../context/GameConnectionContext';
 import { fromBoardSnapshot } from '../game/chessSetup';
 
-/**
- * Connects to the game hub once on mount.
- * Reads an optional joinId from router state; if present calls JoinGame,
- * otherwise calls CreateGame. Updates gameId, board, ready, and opponent
- * in GameContext directly.
- */
 export function useGameActions() {
-  const { setGameId, setBoard, setReady, setOpponent, gameId, ready, playerName } = useGame();
+  const { setGameId, setBoard, setReady, setOpponent, gameId, ready, playerName, playerId, setPlayerId } = useGame();
   const [connection, setConnection] = useState(null);
+
+  // Ensure a player grain exists for this session; creates one if needed.
+  const ensurePlayer = useCallback(async (color) => {
+    if (playerId) return playerId;
+    const newId = await apiCreatePlayer(playerName, color);
+    setPlayerId(newId);
+    return newId;
+  }, [playerId, playerName, setPlayerId]);
 
   useEffect(() => {
     const conn = buildGameConnection();
@@ -22,8 +23,17 @@ export function useGameActions() {
       if (squares) setBoard(squares);
     });
 
-    conn.on('OpponentJoined', (player) => {
-      setOpponent(player);
+    conn.on('OpponentJoined', async (opponentPlayerId) => {
+      try {
+        const player = await apiGetPlayer(opponentPlayerId);
+        setOpponent(player);
+      } catch (err) {
+        console.error('Failed to fetch opponent info:', err);
+      }
+    });
+
+    conn.on('PlayerLeft', () => {
+      setOpponent(null);
     });
 
     conn
@@ -38,44 +48,53 @@ export function useGameActions() {
       setReady(false);
       setOpponent(null);
       setConnection(null);
-      conn.stop(); //Disconnects from the game hub when the component unmounts or the effect is cleaned up
+      conn.stop();
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const joinGame = useCallback(
-    async (joinId) => {
-      if (!connection || !ready) return;
-      const { board, players } = await connection.invoke('JoinGame', joinId, playerName);
-      const squares = fromBoardSnapshot(board);
-      if (squares) setBoard(squares);
-      // players is "Creator,Joiner" — opponent is the creator (first entry)
-      if (players) {
-        const [creatorName] = players.split(',');
-        if (creatorName) setOpponent({ name: creatorName });
+  // Best-effort LeaveGame when the tab/browser is closed.
+  useEffect(() => {
+    const handleUnload = () => {
+      if (connection && gameId && playerId) {
+        connection.send('LeaveGame', gameId, playerId);
       }
-      setGameId(joinId);
-    },
-    [connection, ready, playerName, setBoard, setGameId, setOpponent],
-  );
+    };
+    window.addEventListener('beforeunload', handleUnload);
+    return () => window.removeEventListener('beforeunload', handleUnload);
+  }, [connection, gameId, playerId]);
 
-  const createGame = useCallback(
-    async () => {
-      if (!connection || !ready) return;
-      const newId = await connection.invoke('CreateGame', playerName);
-      setGameId(newId);
-    },
-    [connection, ready, setGameId, playerName],
-  );
+  const createGame = useCallback(async () => {
+    if (!connection || !ready) return;
+    const pid = await ensurePlayer('white');
+    const gid = await apiCreateGame(pid);
+    await connection.invoke('ConnectToGame', gid, pid);
+    setGameId(gid);
+  }, [connection, ready, ensurePlayer, setGameId]);
 
-  const sendMove = useCallback(
-    (snapshot) => {
-      if (!connection || !ready || !gameId) return Promise.resolve();
-      return connection.invoke('SendMove', gameId, snapshot);
-    },
-    [connection, ready, gameId],
-  );
+  const joinGame = useCallback(async (joinId) => {
+    if (!connection || !ready) return;
+    const pid = await ensurePlayer('black');
+    const { board, opponent: opponentId } = await connection.invoke('JoinGame', joinId, pid);
+    const squares = fromBoardSnapshot(board);
+    if (squares) setBoard(squares);
+    if (opponentId) {
+      const opponentInfo = await apiGetPlayer(opponentId);
+      setOpponent(opponentInfo);
+    }
+    setGameId(joinId);
+  }, [connection, ready, ensurePlayer, setBoard, setGameId, setOpponent]);
 
-  return { sendMove, joinGame, createGame };
+  const leaveGame = useCallback(async () => {
+    if (!connection || !gameId || !playerId) return;
+    await connection.invoke('LeaveGame', gameId, playerId);
+  }, [connection, gameId, playerId]);
+
+  const sendMove = useCallback((snapshot) => {
+    if (!connection || !ready || !gameId) return Promise.resolve();
+    return connection.invoke('SendMove', gameId, snapshot);
+  }, [connection, ready, gameId]);
+
+  return { sendMove, joinGame, createGame, leaveGame };
 }
 
 
