@@ -25,11 +25,15 @@ namespace ChessAPI.Hubs
             var gameGrain = _grainFactory.GetGrain<IGameGrain>(gameId);
             var playerGrain = _grainFactory.GetGrain<IPlayerGrain>(playerId);
             string? currentBoard = await gameGrain.GetBoard();
-            string? opponentId = (await gameGrain.GetPlayers()).FirstOrDefault(id => id != playerId);
+            await gameGrain.AddPlayer(playerId);
+            var players = await gameGrain.GetPlayers();
+            string? opponentId = players.FirstOrDefault(id => id != playerId);
+            var statusTask = players.Count >= 2
+                ? gameGrain.UpdateStatus("active")
+                : Task.CompletedTask;
             await Task.WhenAll(
                 playerGrain.GoOnline(),
-                gameGrain.AddPlayer(playerId),
-                gameGrain.UpdateStatus("active"),
+                statusTask,
                 Groups.AddToGroupAsync(Context.ConnectionId, gameId)
             );
             await Clients.OthersInGroup(gameId).SendAsync("OpponentJoined", playerId);

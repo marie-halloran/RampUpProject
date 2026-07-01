@@ -38,6 +38,7 @@ public class GameGrain : Grain, IGameGrain
 
     public async Task AddPlayer(string playerId)
     {
+        if (_state.State.Players.Contains(playerId)) return;
         _state.State.Players.Add(playerId);
         await _state.WriteStateAsync();
     }
@@ -51,7 +52,7 @@ public class GameGrain : Grain, IGameGrain
     public async Task<List<string>> GetPlayers()
     {
         return _state.State.Players;
-        
+
     }
 
     public async Task Close()

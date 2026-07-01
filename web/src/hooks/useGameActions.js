@@ -68,7 +68,7 @@ export function useGameActions() {
     if (!connection || !ready) return;
     const pid = await ensurePlayer('white');
     const gid = await apiCreateGame(pid);
-    await connection.invoke('ConnectToGame', gid, pid);
+    await connection.invoke('JoinGame', gid, pid);
     setGameId(gid);
   }, [connection, ready, ensurePlayer, setGameId]);
 
