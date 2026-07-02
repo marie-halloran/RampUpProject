@@ -11,20 +11,20 @@ import { useGameActions } from '../hooks/useGameActions';
 export default function GameView() {
   const navigate = useNavigate();
   const { gameId: urlGameId } = useParams();
-  const { gameId, setGameId, board, setBoard, ready, opponent, playerName, gameStatus } = useGame();
+  const { ...gameState } = useGame();
   const { sendMove, joinGame, createGame, leaveGame } = useGameActions();
   const [lastMove, setLastMove] = useState(null);
   const [syncState, setSyncState] = useState('idle'); // idle | sending | error
 
   useEffect(() => {
-    if (!ready) return;
+    if (!gameState.ready) return;
     if (urlGameId) {
       joinGame(urlGameId);
     } else {
       createGame();
     }
 
-  }, [ready, urlGameId]); 
+  }, [gameState.ready, urlGameId]); 
 
 
   async function handleMove(nextBoard, move) {
@@ -43,8 +43,8 @@ export default function GameView() {
     <div className="game-view">
       <header className="game-header">
         <div>
-          <h2>{gameId ? `Game ${gameId}` : 'Creating game…'}</h2>
-          <p className="muted">{ready ? 'Connected' : 'Connecting…'}</p>
+          <h2>{gameState.gameId ? `Game ${gameState.gameId}` : 'Creating game…'}</h2>
+          <p className="muted">{gameState.ready ? 'Connected' : 'Connecting…'}</p>
         </div>
         <button type="button" className="ghost-btn" onClick={async () => { await leaveGame(); navigate('/'); }}>
           Leave game
@@ -52,18 +52,18 @@ export default function GameView() {
       </header>
 
       <div className="game-body">
-        <ChessBoard board={board} onMove={handleMove} />
+        <ChessBoard board={gameState.board} onMove={handleMove} />
 
         <aside className="game-sidebar">
           <section>
             <h3>Players</h3>
             <ul className="player-list">
               <li>
-                <span className="dot you" /> {playerName || 'You'}
+                <span className="dot you" /> {gameState.playerName || 'You'}
               </li>
               <li>
-                <span className={`dot ${gameStatus === 'ended' ? 'ended' : opponent ? 'live' : 'waiting'}`} />
-                {gameStatus === 'ended' ? 'Opponent Left' : opponent ? opponent.name : 'Waiting for opponent…'}
+                <span className={`dot ${gameState.gameStatus === 'ended' ? 'ended' : gameState.opponent ? 'live' : 'waiting'}`} />
+                {gameState.gameStatus === 'ended' ? 'Opponent Left' : gameState.opponent ? gameState.opponent.name : 'Waiting for opponent…'}
               </li>
             </ul>
           </section>

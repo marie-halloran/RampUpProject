@@ -37,13 +37,13 @@ env:
     value: chess-api-fhb0d8hgd0euasac.b01.azurefd.net   # replace with your deployed API hostname
 
   - name: target_port
-    value: "443"
+    value: "443"               # local dev: 5242  (see api/ChessAPI/Properties/launchSettings.json)
 
   - name: scheme
-    value: https
+    value: https               # local dev: http
 
   - name: use_tls
-    value: "true"
+    value: "true"              # local dev: false
 
   - name: move_iterations
     value: "100"               # 100 × 2s = 200s of move traffic per game
