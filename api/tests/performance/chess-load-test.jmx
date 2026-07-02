@@ -83,6 +83,20 @@
                        testname="Init Thread Variables" enabled="true">
           <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="script"><![CDATA[
+// Azure Load Testing injects env section values as system environment variables,
+// not JMeter properties. Try lowercase, then uppercase, then JMeter props, then defaults.
+def e = { name, dflt ->
+    System.getenv(name) ?:
+    System.getenv(name.toUpperCase()) ?:
+    props.get(name, dflt)
+}
+
+vars.put("TARGET_HOST",    e("target_host",    "localhost"))
+vars.put("TARGET_PORT",    e("target_port",    "5242"))
+vars.put("SCHEME",         e("scheme",         "http"))
+vars.put("USE_TLS",        e("use_tls",        "false"))
+vars.put("MOVE_ITERATIONS",e("move_iterations","100"))
+
 vars.put("RS", "\u001e")
 def board = '[' +
   '["bR","bN","bB","bQ","bK","bB","bN","bR"],' +
@@ -95,9 +109,20 @@ def board = '[' +
   '["wR","wN","wB","wQ","wK","wB","wN","wR"]' +
 ']'
 vars.put("BOARD_SNAPSHOT", board)
+
+def t = ctx.getThread().getThreadNum()
+// On thread 1 only, dump all env var names so we can see what Azure Load Testing actually injects
+if (t == 1) {
+    def safe = System.getenv().findAll { k, v ->
+        !k.toLowerCase().contains("secret") && !k.toLowerCase().contains("password") && !k.toLowerCase().contains("token")
+    }.collect { k, v -> "${k}=${v}" }.join(" | ")
+    log.info("ENV_DUMP[1]: ${safe}")
+}
+log.info("INIT[${t}] host=${vars.get('TARGET_HOST')}:${vars.get('TARGET_PORT')} tls=${vars.get('USE_TLS')}")
+
 SampleResult.setSuccessful(true)
 SampleResult.setResponseCode("200")
-SampleResult.setResponseMessage("Thread variables initialised")
+SampleResult.setResponseMessage("init ok")
           ]]></stringProp>
         </JSR223Sampler>
         <hashTree/>
@@ -286,7 +311,38 @@ SampleResult.setResponseMessage("Thread variables initialised")
               <stringProp name="RegexExtractor.match_no">1</stringProp>
             </RegexExtractor>
             <hashTree/>
+            <ResponseAssertion guiclass="AssertionGui"
+                               testclass="ResponseAssertion"
+                               testname="Assert negotiate returned connectionToken"
+                               enabled="true">
+              <collectionProp name="Asserion.test_strings">
+                <stringProp name="49586">connectionToken</stringProp>
+              </collectionProp>
+              <stringProp name="Assertion.custom_message">Negotiate failed - no connectionToken in response</stringProp>
+              <intProp name="Assertion.test_type">2</intProp>
+              <boolProp name="Assertion.assume_success">false</boolProp>
+            </ResponseAssertion>
+            <hashTree/>
           </hashTree>
+          <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler"
+                         testname="Diagnostics - Log Variables"
+                         enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="script"><![CDATA[
+def token   = vars.get("connectionToken") ?: "(null)"
+def gameId  = vars.get("gameId")          ?: "(null)"
+def pId1    = vars.get("playerId1")       ?: "(null)"
+def host    = vars.get("TARGET_HOST")     ?: "(null)"
+def port    = vars.get("TARGET_PORT")     ?: "(null)"
+def tls     = vars.get("USE_TLS")         ?: "(null)"
+def t = ctx.getThread().getThreadNum()
+log.info("DIAG[${t}] host=${host}:${port} tls=${tls} gameId=${gameId} playerId1=${pId1} connectionToken=${token}")
+SampleResult.setSuccessful(true)
+SampleResult.setResponseCode("200")
+SampleResult.setResponseMessage("token=${token} gameId=${gameId}")
+            ]]></stringProp>
+          </JSR223Sampler>
+          <hashTree/>
           <eu.luminis.jmeter.wssampler.OpenWebSocketSampler
               guiclass="eu.luminis.jmeter.wssampler.OpenWebSocketSamplerUI"
               testclass="eu.luminis.jmeter.wssampler.OpenWebSocketSampler"
@@ -294,12 +350,28 @@ SampleResult.setResponseMessage("Thread variables initialised")
               enabled="true">
             <stringProp name="serverName">${TARGET_HOST}</stringProp>
             <stringProp name="serverPort">${TARGET_PORT}</stringProp>
-            <boolProp name="TLS">${USE_TLS}</boolProp>
+            <stringProp name="TLS">${USE_TLS}</stringProp>
             <stringProp name="path">/game/live?id=${connectionToken}</stringProp>
             <intProp name="connectTimeout">10000</intProp>
             <intProp name="readTimeout">10000</intProp>
           </eu.luminis.jmeter.wssampler.OpenWebSocketSampler>
-          <hashTree/>
+          <hashTree>
+            <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor"
+                                testname="Set WS port and TLS as typed properties"
+                                enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="script"><![CDATA[
+// The WS plugin does not always substitute JMeter variables in serverPort/TLS.
+// Override them here with typed Java properties so the plugin reads the right values.
+def port = Integer.parseInt(vars.get("TARGET_PORT") ?: "443")
+def tls  = "true".equalsIgnoreCase(vars.get("USE_TLS") ?: "false")
+sampler.setProperty("serverPort", port)
+sampler.setProperty("TLS", tls)
+sampler.setProperty("serverName", vars.get("TARGET_HOST") ?: "localhost")
+              ]]></stringProp>
+            </JSR223PreProcessor>
+            <hashTree/>
+          </hashTree>
           <eu.luminis.jmeter.wssampler.SingleWriteWebSocketSampler
               guiclass="eu.luminis.jmeter.wssampler.SingleWriteWebSocketSamplerUI"
               testclass="eu.luminis.jmeter.wssampler.SingleWriteWebSocketSampler"

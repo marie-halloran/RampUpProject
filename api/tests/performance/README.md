@@ -18,6 +18,8 @@ Each JMeter thread simulates one complete game:
 
 ---
 
+# az load test create --load-test-resource chess-app-load --resource-group chess-app --test-id chess-load-test --load-test-config-file api/tests/performance/load-test-config.yaml
+
 ## Required plugin
 
 The test uses the **jmeter-websocket-samplers** library by Peter Doornbosch

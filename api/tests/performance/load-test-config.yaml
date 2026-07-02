@@ -11,9 +11,7 @@
 version: v0.1
 testId: chess-load-test
 displayName: Chess API Load Test
-description: >
-  1000 concurrent players (500 games × 2 players), ~1 move/second per player,
-  total duration under 5 minutes.
+description: "1000 players, 500 games, ~1 move/s per player, <5 min"
 
 # Path to the JMeter test plan (relative to this file)
 testPlan: chess-load-test.jmx
@@ -28,7 +26,7 @@ engineInstances: 1
 # eu.luminis.jmeter.wssampler.* classes.  Download the JAR from:
 #   https://github.com/Luminis-Arnhem/jmeter-websocket-samplers/releases
 configurationFiles:
-  - jmeter-websocket-samplers-1.2.8.jar
+  - JMeterWebSocketSamplers-1.0.jar
 
 # JMeter properties injected via -J flags at runtime.
 # Override these values to point at your deployed environment.
