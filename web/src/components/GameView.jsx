@@ -28,7 +28,7 @@ export default function GameView() {
 
 
   async function handleMove(nextBoard, move) {
-    setBoard(nextBoard);
+    gameState.setBoard(nextBoard);
     setLastMove(move);
     setSyncState('sending');
     try {

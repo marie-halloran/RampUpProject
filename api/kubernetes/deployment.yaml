@@ -15,9 +15,19 @@ spec:
         azure.workload.identity/use: "true"
     spec:
       serviceAccountName: chess-api-sa
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: chess-api
           image: chessapp.azurecr.io/chessapi:latest
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           env:
             - name: Orleans__CosmosEndpoint
               value: "https://chess-cosmos.documents.azure.com:443/"
