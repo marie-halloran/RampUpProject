@@ -34,16 +34,16 @@ configurationFiles:
 # Override these values to point at your deployed environment.
 env:
   - name: target_host
-    value: localhost           # Replace with your app hostname, e.g. myapp.azurewebsites.net
+    value: chess-api-fhb0d8hgd0euasac.b01.azurefd.net   # replace with your deployed API hostname
 
   - name: target_port
-    value: "443"               # 443 for HTTPS, 5000 for local HTTP
+    value: "443"
 
   - name: scheme
-    value: https               # http or https
+    value: https
 
   - name: use_tls
-    value: "true"              # true for wss://, false for ws://
+    value: "true"
 
   - name: move_iterations
     value: "100"               # 100 × 2s = 200s of move traffic per game
